@@ -1,0 +1,30 @@
+﻿:root {
+  font-family: "Segoe UI", sans-serif;
+  color: #12202f;
+  background: linear-gradient(180deg, #f7f3e8 0%, #eff5f8 100%);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  display: grid;
+  place-items: center;
+  gap: 1rem;
+  min-height: 100vh;
+}
+
+button {
+  border: none;
+  border-radius: 999px;
+  padding: 0.85rem 1.4rem;
+  background: #1e5d4f;
+  color: #f7f3e8;
+  font: inherit;
+}
