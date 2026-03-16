@@ -1,5 +1,6 @@
-﻿import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
+import { ArtifactPanel } from './components/ArtifactPanel'
 import { LoginShell } from './components/LoginShell'
 import { WorkspacePanel } from './components/WorkspacePanel'
 import { DEFAULT_MODEL, DEFAULT_PROVIDER_ID } from './lib/defaults'
@@ -13,7 +14,17 @@ export default function App() {
   const [goal, setGoal] = useState('')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [artifact, setArtifact] = useState<GenerationArtifact | null>(null)
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
+
+  useEffect(() => {
+    if (artifact?.files.length) {
+      setSelectedFilePath(artifact.files[0].path)
+      return
+    }
+
+    setSelectedFilePath(null)
+  }, [artifact])
 
   async function handleGenerate() {
     setErrorMessage(null)
@@ -43,16 +54,24 @@ export default function App() {
           onContinue={() => setScreen('workspace')}
         />
       ) : (
-        <WorkspacePanel
-          workspacePath={workspacePath}
-          goal={goal}
-          errorMessage={errorMessage}
-          isGenerating={isGenerating}
-          onWorkspacePathChange={setWorkspacePath}
-          onGoalChange={setGoal}
-          onGenerate={handleGenerate}
-          artifact={artifact}
-        />
+        <section className="workspace-layout">
+          <WorkspacePanel
+            workspacePath={workspacePath}
+            goal={goal}
+            errorMessage={errorMessage}
+            isGenerating={isGenerating}
+            onWorkspacePathChange={setWorkspacePath}
+            onGoalChange={setGoal}
+            onGenerate={handleGenerate}
+          />
+          {artifact ? (
+            <ArtifactPanel
+              artifact={artifact}
+              selectedFilePath={selectedFilePath}
+              onSelectFile={setSelectedFilePath}
+            />
+          ) : null}
+        </section>
       )}
     </main>
   )
