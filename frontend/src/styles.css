@@ -23,7 +23,7 @@ body {
 }
 
 .panel {
-  width: min(100%, 32rem);
+  width: min(100%, 38rem);
   padding: 2rem;
   border: 1px solid rgba(21, 36, 51, 0.12);
   border-radius: 1.5rem;
@@ -42,11 +42,17 @@ body {
   font-weight: 600;
 }
 
-input {
+input,
+textarea {
   border: 1px solid rgba(21, 36, 51, 0.18);
   border-radius: 0.9rem;
   padding: 0.9rem 1rem;
   font: inherit;
+}
+
+textarea {
+  min-height: 7rem;
+  resize: vertical;
 }
 
 button {
@@ -60,4 +66,14 @@ button {
 
 button:disabled {
   opacity: 0.55;
+}
+
+.error-message {
+  color: #9a2f2f;
+  font-weight: 600;
+}
+
+.artifact-summary {
+  margin-top: 1rem;
+  color: #1e5d4f;
 }

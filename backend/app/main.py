@@ -5,6 +5,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.chat import router as chat_router
 from app.api.routes.files import router as files_router
 from app.api.routes.providers import router as providers_router
+from app.core.config import ProviderConfigurationError
 
 app = FastAPI()
 
@@ -17,6 +18,19 @@ def health() -> dict:
         'data': {'status': 'ok'},
         'errors': [],
     }
+
+
+@app.exception_handler(ProviderConfigurationError)
+def handle_provider_configuration_error(_, exc: ProviderConfigurationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={
+            'success': False,
+            'message': str(exc),
+            'data': None,
+            'errors': [str(exc)],
+        },
+    )
 
 
 @app.exception_handler(ValueError)

@@ -56,3 +56,21 @@ def test_generate_rejects_unknown_provider() -> None:
     )
 
     assert response.status_code == 400
+
+
+def test_generate_returns_503_when_openai_key_missing(monkeypatch) -> None:
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
+    client = TestClient(app)
+
+    response = client.post(
+        '/api/chat/generate',
+        json={
+            'message': 'Build a stock trading system MVP',
+            'workspace_path': 'D:/Codex/Trading assistant',
+            'provider_id': 'openai',
+            'model': 'gpt-4.1',
+        },
+    )
+
+    assert response.status_code == 503
+    assert 'OPENAI_API_KEY is required' in response.json()['message']
