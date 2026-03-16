@@ -1,13 +1,14 @@
-﻿import { render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { ArtifactPanel } from './ArtifactPanel'
 
 describe('ArtifactPanel', () => {
-  it('lets the user preview files and deselect one before apply', async () => {
+  it('switches the file preview when a different file is selected', async () => {
     const user = userEvent.setup()
+    const onSelectFile = vi.fn()
 
-    render(
+    const { rerender } = render(
       <ArtifactPanel
         artifact={{
           summary: 'ready',
@@ -15,18 +16,39 @@ describe('ArtifactPanel', () => {
           project_tree: ['frontend/', 'backend/'],
           files: [
             { path: 'README.md', purpose: 'docs', content: '# Demo', selected: true },
-            { path: 'notes.txt', purpose: 'notes', content: 'skip', selected: true },
+            { path: 'backend/app/main.py', purpose: 'backend entry', content: 'print("hello")', selected: true },
           ],
           warnings: [],
           next_steps: [],
         }}
-        onToggleFile={() => {}}
-        onApply={() => {}}
+        selectedFilePath="README.md"
+        onSelectFile={onSelectFile}
       />,
     )
 
-    expect(screen.getByText('README.md')).toBeInTheDocument()
-    await user.click(screen.getByLabelText(/notes.txt/i))
-    expect(screen.getByRole('button', { name: /apply selected files/i })).toBeInTheDocument()
+    expect(screen.getByText('# Demo')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /backend\/app\/main.py/i }))
+    expect(onSelectFile).toHaveBeenCalledWith('backend/app/main.py')
+
+    rerender(
+      <ArtifactPanel
+        artifact={{
+          summary: 'ready',
+          architecture: 'split app',
+          project_tree: ['frontend/', 'backend/'],
+          files: [
+            { path: 'README.md', purpose: 'docs', content: '# Demo', selected: true },
+            { path: 'backend/app/main.py', purpose: 'backend entry', content: 'print("hello")', selected: true },
+          ],
+          warnings: [],
+          next_steps: [],
+        }}
+        selectedFilePath="backend/app/main.py"
+        onSelectFile={onSelectFile}
+      />,
+    )
+
+    expect(screen.getByText('print("hello")')).toBeInTheDocument()
   })
 })

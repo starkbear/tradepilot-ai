@@ -1,5 +1,3 @@
-﻿import type { GenerationArtifact } from '../lib/types'
-
 type WorkspacePanelProps = {
   workspacePath: string
   goal: string
@@ -8,7 +6,6 @@ type WorkspacePanelProps = {
   onWorkspacePathChange: (value: string) => void
   onGoalChange: (value: string) => void
   onGenerate: () => void
-  artifact?: GenerationArtifact | null
 }
 
 export function WorkspacePanel({
@@ -19,12 +16,11 @@ export function WorkspacePanel({
   onWorkspacePathChange,
   onGoalChange,
   onGenerate,
-  artifact,
 }: WorkspacePanelProps) {
   const canGenerate = Boolean(workspacePath.trim() && goal.trim()) && !isGenerating
 
   return (
-    <section className="panel">
+    <section className="panel workspace-panel">
       <h1>Trading System Assistant</h1>
       <label className="field">
         <span>Workspace Path</span>
@@ -42,7 +38,6 @@ export function WorkspacePanel({
         {isGenerating ? 'Generating...' : 'Generate Scaffold'}
       </button>
       {errorMessage ? <p className="error-message">{errorMessage}</p> : null}
-      {artifact ? <p className="artifact-summary">{artifact.summary}</p> : null}
     </section>
   )
 }

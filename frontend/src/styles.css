@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   font-family: Georgia, "Times New Roman", serif;
   color: #152433;
   background:
@@ -22,13 +22,26 @@ body {
   padding: 2rem;
 }
 
+.workspace-layout {
+  display: grid;
+  gap: 1.5rem;
+  width: min(100%, 78rem);
+  align-items: start;
+  grid-template-columns: minmax(20rem, 28rem) minmax(0, 1fr);
+}
+
 .panel {
-  width: min(100%, 38rem);
+  width: 100%;
   padding: 2rem;
   border: 1px solid rgba(21, 36, 51, 0.12);
   border-radius: 1.5rem;
   background: rgba(255, 252, 246, 0.88);
   box-shadow: 0 20px 60px rgba(18, 32, 47, 0.12);
+  box-sizing: border-box;
+}
+
+.workspace-panel {
+  max-width: 28rem;
 }
 
 .field {
@@ -73,7 +86,105 @@ button:disabled {
   font-weight: 600;
 }
 
+.artifact-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.artifact-header {
+  display: grid;
+  gap: 0.5rem;
+}
+
 .artifact-summary {
-  margin-top: 1rem;
+  margin: 0;
   color: #1e5d4f;
+  font-size: 1.05rem;
+}
+
+.artifact-section {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.artifact-section h3,
+.artifact-header h2 {
+  margin: 0;
+}
+
+.artifact-section p {
+  margin: 0;
+}
+
+.artifact-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.file-list {
+  gap: 0.75rem;
+}
+
+.file-list p {
+  margin: 0.2rem 0 0;
+  color: rgba(21, 36, 51, 0.78);
+}
+
+.file-select-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: #152433;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.file-select-button.is-selected {
+  color: #1e5d4f;
+  text-decoration: underline;
+}
+
+.file-preview {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: rgba(21, 36, 51, 0.05);
+}
+
+.file-preview h3,
+.file-preview p,
+.file-preview pre {
+  margin: 0;
+}
+
+.preview-path {
+  font-weight: 700;
+}
+
+.file-preview pre {
+  overflow-x: auto;
+  padding: 0.85rem 1rem;
+  border-radius: 0.85rem;
+  background: rgba(21, 36, 51, 0.08);
+}
+
+.warning-section {
+  color: #7a4f14;
+}
+
+@media (max-width: 900px) {
+  .workspace-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-panel {
+    max-width: none;
+  }
 }
