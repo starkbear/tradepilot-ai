@@ -1,0 +1,79 @@
+﻿:root {
+  font-family: Georgia, "Times New Roman", serif;
+  color: #152433;
+  background:
+    radial-gradient(circle at top, rgba(221, 180, 92, 0.28), transparent 35%),
+    linear-gradient(180deg, #f8f4ea 0%, #edf3f6 100%);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.panel {
+  width: min(100%, 38rem);
+  padding: 2rem;
+  border: 1px solid rgba(21, 36, 51, 0.12);
+  border-radius: 1.5rem;
+  background: rgba(255, 252, 246, 0.88);
+  box-shadow: 0 20px 60px rgba(18, 32, 47, 0.12);
+}
+
+.field {
+  display: grid;
+  gap: 0.55rem;
+  margin: 1.25rem 0;
+}
+
+.field span {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+input,
+textarea {
+  border: 1px solid rgba(21, 36, 51, 0.18);
+  border-radius: 0.9rem;
+  padding: 0.9rem 1rem;
+  font: inherit;
+}
+
+textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+button {
+  border: none;
+  border-radius: 999px;
+  padding: 0.85rem 1.4rem;
+  background: #1e5d4f;
+  color: #f7f3e8;
+  font: inherit;
+}
+
+button:disabled {
+  opacity: 0.55;
+}
+
+.error-message {
+  color: #9a2f2f;
+  font-weight: 600;
+}
+
+.artifact-summary {
+  margin-top: 1rem;
+  color: #1e5d4f;
+}
