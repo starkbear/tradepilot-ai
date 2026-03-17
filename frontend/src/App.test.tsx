@@ -1,4 +1,4 @@
-﻿import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -59,7 +59,7 @@ describe('App', () => {
     expect(screen.getByText(/review generated files/i)).toBeInTheDocument()
   })
 
-  it('shows a readable error when generation fails', async () => {
+  it('shows setup guidance when the openai api key is missing', async () => {
     const user = userEvent.setup()
     vi.stubGlobal(
       'fetch',
@@ -84,7 +84,11 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /generate scaffold/i }))
 
     await waitFor(() => {
-      expect(screen.getByText(/openai_api_key is required/i)).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /connect openai/i })).toBeInTheDocument()
     })
+
+    expect(screen.getByText(/set your openai api key in powershell before generating/i)).toBeInTheDocument()
+    expect(screen.getByText('$env:OPENAI_API_KEY="your_api_key_here"')).toBeInTheDocument()
+    expect(screen.getByText(/after setting the key, click generate scaffold again/i)).toBeInTheDocument()
   })
 })

@@ -1,3 +1,5 @@
+import { ProviderSetupNotice } from './ProviderSetupNotice'
+
 type WorkspacePanelProps = {
   workspacePath: string
   goal: string
@@ -18,6 +20,7 @@ export function WorkspacePanel({
   onGenerate,
 }: WorkspacePanelProps) {
   const canGenerate = Boolean(workspacePath.trim() && goal.trim()) && !isGenerating
+  const needsOpenAiSetup = errorMessage?.includes('OPENAI_API_KEY') ?? false
 
   return (
     <section className="panel workspace-panel">
@@ -37,7 +40,8 @@ export function WorkspacePanel({
       <button type="button" disabled={!canGenerate} onClick={onGenerate}>
         {isGenerating ? 'Generating...' : 'Generate Scaffold'}
       </button>
-      {errorMessage ? <p className="error-message">{errorMessage}</p> : null}
+      {needsOpenAiSetup ? <ProviderSetupNotice errorMessage={errorMessage ?? ''} /> : null}
+      {errorMessage && !needsOpenAiSetup ? <p className="error-message">{errorMessage}</p> : null}
     </section>
   )
 }
