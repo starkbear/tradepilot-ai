@@ -86,6 +86,34 @@ button:disabled {
   font-weight: 600;
 }
 
+.setup-notice {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(30, 93, 79, 0.2);
+  border-radius: 1rem;
+  background: rgba(30, 93, 79, 0.08);
+}
+
+.setup-notice h2,
+.setup-notice p,
+.setup-notice pre {
+  margin: 0;
+}
+
+.setup-notice pre {
+  overflow-x: auto;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.85rem;
+  background: rgba(21, 36, 51, 0.08);
+}
+
+.setup-note-detail {
+  color: #7a4f14;
+  font-size: 0.95rem;
+}
+
 .artifact-panel {
   display: grid;
   gap: 1rem;
