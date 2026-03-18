@@ -1,4 +1,4 @@
-﻿# TradePilot AI
+# TradePilot AI
 
 TradePilot AI is a local web-based assistant for planning and scaffolding stock trading system projects.
 
@@ -18,14 +18,13 @@ Building a trading system usually starts with fragmented notes, disconnected pro
 The repository currently includes a working MVP foundation:
 
 - FastAPI backend with health, auth, provider, generation, and file-apply endpoints
-- provider-extensible backend architecture with OpenAI-first wiring
+- provider-extensible backend architecture with a live OpenAI integration path
 - local React/Vite frontend shell with login, workspace, and generation form flow
 - artifact preview components and baseline frontend tests
 - safe workspace file application logic with path-boundary validation
 
 What is not finished yet:
 
-- real OpenAI response integration
 - full artifact rendering and apply flow wired into the main frontend screen
 - production-ready local persistence and multi-provider switching UI
 
@@ -131,7 +130,7 @@ scripts/
 ### Near Term
 
 - connect the frontend artifact panel to live backend generation results
-- implement real OpenAI provider calls
+- improve prompt shaping and provider resilience for OpenAI generation
 - support selective file apply from the UI
 - improve README, setup ergonomics, and local developer workflow
 
@@ -152,3 +151,4 @@ Project design and implementation planning live here:
 ## Notes
 
 This project is focused on system design and engineering workflow support. It is not investment advice and does not promise trading performance.
+
