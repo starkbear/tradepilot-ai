@@ -1,13 +1,30 @@
-import type { GenerationArtifact } from '../lib/types'
+import { ApplyPanel } from './ApplyPanel'
+import type { ApplyResult, GenerationArtifact } from '../lib/types'
 import { FilePreview } from './FilePreview'
 
 type ArtifactPanelProps = {
   artifact: GenerationArtifact
   selectedFilePath: string | null
+  selectedFilePaths: string[]
+  isApplying: boolean
+  applyResult: ApplyResult | null
+  applyErrorMessage: string | null
   onSelectFile: (path: string) => void
+  onToggleFile: (path: string) => void
+  onApplySelected: () => void
 }
 
-export function ArtifactPanel({ artifact, selectedFilePath, onSelectFile }: ArtifactPanelProps) {
+export function ArtifactPanel({
+  artifact,
+  selectedFilePath,
+  selectedFilePaths,
+  isApplying,
+  applyResult,
+  applyErrorMessage,
+  onSelectFile,
+  onToggleFile,
+  onApplySelected,
+}: ArtifactPanelProps) {
   const selectedFile = artifact.files.find((file) => file.path === selectedFilePath) ?? artifact.files[0]
 
   return (
@@ -35,18 +52,27 @@ export function ArtifactPanel({ artifact, selectedFilePath, onSelectFile }: Arti
         <h3>Files</h3>
         <ul className="artifact-list file-list">
           {artifact.files.map((file) => {
-            const isSelected = file.path === selectedFile?.path
+            const isPreviewed = file.path === selectedFile?.path
+            const isChecked = selectedFilePaths.includes(file.path)
 
             return (
-              <li key={file.path}>
-                <button
-                  type="button"
-                  className={`file-select-button${isSelected ? ' is-selected' : ''}`}
-                  aria-pressed={isSelected}
-                  onClick={() => onSelectFile(file.path)}
-                >
-                  {file.path}
-                </button>
+              <li key={file.path} className="file-list-item">
+                <div className="file-select-row">
+                  <input
+                    type="checkbox"
+                    aria-label={file.path}
+                    checked={isChecked}
+                    onChange={() => onToggleFile(file.path)}
+                  />
+                  <button
+                    type="button"
+                    className={`file-select-button${isPreviewed ? ' is-selected' : ''}`}
+                    aria-pressed={isPreviewed}
+                    onClick={() => onSelectFile(file.path)}
+                  >
+                    {file.path}
+                  </button>
+                </div>
                 <p>{file.purpose}</p>
               </li>
             )
@@ -54,6 +80,17 @@ export function ArtifactPanel({ artifact, selectedFilePath, onSelectFile }: Arti
         </ul>
         {selectedFile ? <FilePreview file={selectedFile} /> : null}
       </section>
+
+      {artifact.files.length > 0 ? (
+        <ApplyPanel
+          selectedCount={selectedFilePaths.length}
+          totalCount={artifact.files.length}
+          isApplying={isApplying}
+          applyResult={applyResult}
+          applyErrorMessage={applyErrorMessage}
+          onApply={onApplySelected}
+        />
+      ) : null}
 
       {artifact.warnings.length > 0 ? (
         <section className="artifact-section warning-section">

@@ -155,9 +155,21 @@ button:disabled {
   gap: 0.75rem;
 }
 
-.file-list p {
+.file-list-item p {
   margin: 0.2rem 0 0;
   color: rgba(21, 36, 51, 0.78);
+}
+
+.file-select-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.file-select-row input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
 }
 
 .file-select-button {
@@ -201,6 +213,24 @@ button:disabled {
   padding: 0.85rem 1rem;
   border-radius: 0.85rem;
   background: rgba(21, 36, 51, 0.08);
+}
+
+.apply-panel {
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(21, 36, 51, 0.1);
+}
+
+.apply-panel-header {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.apply-result-summary {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.9rem 1rem;
+  border-radius: 0.85rem;
+  background: rgba(30, 93, 79, 0.08);
 }
 
 .warning-section {
