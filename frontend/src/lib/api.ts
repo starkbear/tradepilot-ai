@@ -1,10 +1,15 @@
-﻿import type { GenerationArtifact } from './types'
+import type { ApplyResult, FileDraft, GenerationArtifact } from './types'
 
 type GenerateRequest = {
   message: string
   workspacePath: string
   providerId: string
   model: string
+}
+
+type ApplyFilesRequest = {
+  workspacePath: string
+  files: FileDraft[]
 }
 
 type ApiEnvelope<T> = {
@@ -32,6 +37,27 @@ export async function generateArtifact(request: GenerateRequest): Promise<Genera
 
   if (!response.ok || !payload.success || !payload.data) {
     throw new Error(payload.message || 'Generation failed')
+  }
+
+  return payload.data
+}
+
+export async function applyFiles(request: ApplyFilesRequest): Promise<ApplyResult> {
+  const response = await fetch('/api/files/apply', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      workspace_path: request.workspacePath,
+      files: request.files,
+    }),
+  })
+
+  const payload = (await response.json()) as ApiEnvelope<ApplyResult | null>
+
+  if (!response.ok || !payload.success || !payload.data) {
+    throw new Error(payload.message || 'Applying files failed')
   }
 
   return payload.data

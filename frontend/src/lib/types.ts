@@ -1,4 +1,4 @@
-﻿export type ScreenState = 'login' | 'workspace'
+export type ScreenState = 'login' | 'workspace'
 
 export type FileDraft = {
   path: string
@@ -15,4 +15,10 @@ export type GenerationArtifact = {
   files: FileDraft[]
   warnings: string[]
   next_steps: string[]
+}
+
+export type ApplyResult = {
+  applied: string[]
+  skipped: string[]
+  errors: string[]
 }

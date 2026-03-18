@@ -7,6 +7,8 @@ describe('ArtifactPanel', () => {
   it('switches the file preview when a different file is selected', async () => {
     const user = userEvent.setup()
     const onSelectFile = vi.fn()
+    const onToggleFile = vi.fn()
+    const onApplySelected = vi.fn()
 
     const { rerender } = render(
       <ArtifactPanel
@@ -22,7 +24,13 @@ describe('ArtifactPanel', () => {
           next_steps: [],
         }}
         selectedFilePath="README.md"
+        selectedFilePaths={['README.md', 'backend/app/main.py']}
+        isApplying={false}
+        applyResult={null}
+        applyErrorMessage={null}
         onSelectFile={onSelectFile}
+        onToggleFile={onToggleFile}
+        onApplySelected={onApplySelected}
       />,
     )
 
@@ -45,7 +53,13 @@ describe('ArtifactPanel', () => {
           next_steps: [],
         }}
         selectedFilePath="backend/app/main.py"
+        selectedFilePaths={['README.md', 'backend/app/main.py']}
+        isApplying={false}
+        applyResult={null}
+        applyErrorMessage={null}
         onSelectFile={onSelectFile}
+        onToggleFile={onToggleFile}
+        onApplySelected={onApplySelected}
       />,
     )
 
