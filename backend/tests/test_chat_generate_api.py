@@ -1,9 +1,13 @@
-from fastapi.testclient import TestClient
+﻿from fastapi.testclient import TestClient
 from app.main import app
 
 
-class FakeProvider:
+class CapturingProvider:
+    def __init__(self) -> None:
+        self.last_prompt_bundle = None
+
     def generate(self, prompt_bundle):
+        self.last_prompt_bundle = prompt_bundle
         return {
             'assistant_message': 'Here is your scaffold.',
             'summary': 'MVP scaffold ready.',
@@ -28,7 +32,18 @@ class BrokenProvider:
 
 
 def test_generate_returns_structured_artifacts(monkeypatch) -> None:
-    monkeypatch.setattr('app.providers.factory.get_provider', lambda *_: FakeProvider())
+    provider = CapturingProvider()
+    monkeypatch.setattr('app.providers.factory.get_provider', lambda *_: provider)
+    monkeypatch.setattr(
+        'app.api.routes.chat.build_workspace_context',
+        lambda *_: {
+            'workspace_summary': 'React frontend + FastAPI backend.',
+            'directory_snapshot': ['backend/', 'frontend/'],
+            'key_files': [],
+            'generation_guidance': ['The repository already exists.'],
+        },
+        raising=False,
+    )
     client = TestClient(app)
 
     response = client.post(
@@ -45,6 +60,10 @@ def test_generate_returns_structured_artifacts(monkeypatch) -> None:
     data = response.json()['data']
     assert data['summary'] == 'MVP scaffold ready.'
     assert data['files'][0]['path'] == 'README.md'
+    assert provider.last_prompt_bundle is not None
+    assert 'Workspace Summary:' in provider.last_prompt_bundle.user_prompt
+    assert 'React frontend + FastAPI backend.' in provider.last_prompt_bundle.user_prompt
+
 
 
 def test_generate_rejects_unknown_provider() -> None:
@@ -61,6 +80,7 @@ def test_generate_rejects_unknown_provider() -> None:
     )
 
     assert response.status_code == 400
+
 
 
 def test_generate_returns_503_when_openai_key_missing(monkeypatch) -> None:
@@ -81,8 +101,19 @@ def test_generate_returns_503_when_openai_key_missing(monkeypatch) -> None:
     assert 'OPENAI_API_KEY is required' in response.json()['message']
 
 
+
 def test_generate_returns_400_when_openai_response_is_invalid(monkeypatch) -> None:
     monkeypatch.setattr('app.providers.factory.get_provider', lambda *_: BrokenProvider())
+    monkeypatch.setattr(
+        'app.api.routes.chat.build_workspace_context',
+        lambda *_: {
+            'workspace_summary': 'Existing workspace.',
+            'directory_snapshot': [],
+            'key_files': [],
+            'generation_guidance': [],
+        },
+        raising=False,
+    )
     client = TestClient(app)
 
     response = client.post(
