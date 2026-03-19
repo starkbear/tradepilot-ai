@@ -21,6 +21,16 @@ class CapturingProvider:
                     'selected': True,
                 }
             ],
+            'changes': [
+                {
+                    'path': 'backend/app/main.py',
+                    'mode': 'patch',
+                    'reason': 'Register the router.',
+                    'old_snippet': 'app = FastAPI()\n',
+                    'new_content': 'app = FastAPI()\napp.include_router(router)\n',
+                    'selected': True,
+                }
+            ],
             'warnings': [],
             'next_steps': ['Review generated files'],
         }
@@ -60,10 +70,10 @@ def test_generate_returns_structured_artifacts(monkeypatch) -> None:
     data = response.json()['data']
     assert data['summary'] == 'MVP scaffold ready.'
     assert data['files'][0]['path'] == 'README.md'
+    assert data['changes'][0]['path'] == 'backend/app/main.py'
     assert provider.last_prompt_bundle is not None
     assert 'Workspace Summary:' in provider.last_prompt_bundle.user_prompt
     assert 'React frontend + FastAPI backend.' in provider.last_prompt_bundle.user_prompt
-
 
 
 def test_generate_rejects_unknown_provider() -> None:
@@ -82,7 +92,6 @@ def test_generate_rejects_unknown_provider() -> None:
     assert response.status_code == 400
 
 
-
 def test_generate_returns_503_when_openai_key_missing(monkeypatch) -> None:
     monkeypatch.delenv('OPENAI_API_KEY', raising=False)
     client = TestClient(app)
@@ -99,7 +108,6 @@ def test_generate_returns_503_when_openai_key_missing(monkeypatch) -> None:
 
     assert response.status_code == 503
     assert 'OPENAI_API_KEY is required' in response.json()['message']
-
 
 
 def test_generate_returns_400_when_openai_response_is_invalid(monkeypatch) -> None:

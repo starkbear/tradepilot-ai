@@ -16,15 +16,19 @@ export default function App() {
   const [artifact, setArtifact] = useState<GenerationArtifact | null>(null)
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null)
   const [selectedFilePaths, setSelectedFilePaths] = useState<string[]>([])
+  const [selectedChangePath, setSelectedChangePath] = useState<string | null>(null)
+  const [selectedChangePaths, setSelectedChangePaths] = useState<string[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
   const [applyResult, setApplyResult] = useState<ApplyResult | null>(null)
   const [applyErrorMessage, setApplyErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    if (artifact?.files.length) {
-      setSelectedFilePath(artifact.files[0].path)
+    if (artifact) {
+      setSelectedFilePath(artifact.files[0]?.path ?? null)
       setSelectedFilePaths(artifact.files.map((file) => file.path))
+      setSelectedChangePath(null)
+      setSelectedChangePaths(artifact.changes.map((change) => change.path))
       setApplyResult(null)
       setApplyErrorMessage(null)
       return
@@ -32,6 +36,8 @@ export default function App() {
 
     setSelectedFilePath(null)
     setSelectedFilePaths([])
+    setSelectedChangePath(null)
+    setSelectedChangePaths([])
   }, [artifact])
 
   async function handleGenerate() {
@@ -61,6 +67,22 @@ export default function App() {
     )
   }
 
+  function handleToggleChange(path: string) {
+    setSelectedChangePaths((current) =>
+      current.includes(path) ? current.filter((entry) => entry !== path) : [...current, path],
+    )
+  }
+
+  function handleSelectFile(path: string) {
+    setSelectedFilePath(path)
+    setSelectedChangePath(null)
+  }
+
+  function handleSelectChange(path: string) {
+    setSelectedChangePath(path)
+    setSelectedFilePath(null)
+  }
+
   async function handleApplySelected() {
     if (!artifact) {
       return
@@ -74,10 +96,14 @@ export default function App() {
       const files = artifact.files
         .filter((file) => selectedFilePaths.includes(file.path))
         .map((file) => ({ ...file, selected: true }))
+      const changes = artifact.changes
+        .filter((change) => selectedChangePaths.includes(change.path))
+        .map((change) => ({ ...change, selected: true }))
 
       const result = await applyFiles({
         workspacePath,
         files,
+        changes,
       })
       setApplyResult(result)
     } catch (error) {
@@ -111,11 +137,15 @@ export default function App() {
               artifact={artifact}
               selectedFilePath={selectedFilePath}
               selectedFilePaths={selectedFilePaths}
+              selectedChangePath={selectedChangePath}
+              selectedChangePaths={selectedChangePaths}
               isApplying={isApplying}
               applyResult={applyResult}
               applyErrorMessage={applyErrorMessage}
-              onSelectFile={setSelectedFilePath}
+              onSelectFile={handleSelectFile}
               onToggleFile={handleToggleFile}
+              onSelectChange={handleSelectChange}
+              onToggleChange={handleToggleChange}
               onApplySelected={handleApplySelected}
             />
           ) : null}

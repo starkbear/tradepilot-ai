@@ -1,4 +1,5 @@
 import { ApplyPanel } from './ApplyPanel'
+import { ChangePreview } from './ChangePreview'
 import type { ApplyResult, GenerationArtifact } from '../lib/types'
 import { FilePreview } from './FilePreview'
 
@@ -6,11 +7,15 @@ type ArtifactPanelProps = {
   artifact: GenerationArtifact
   selectedFilePath: string | null
   selectedFilePaths: string[]
+  selectedChangePath: string | null
+  selectedChangePaths: string[]
   isApplying: boolean
   applyResult: ApplyResult | null
   applyErrorMessage: string | null
   onSelectFile: (path: string) => void
   onToggleFile: (path: string) => void
+  onSelectChange: (path: string) => void
+  onToggleChange: (path: string) => void
   onApplySelected: () => void
 }
 
@@ -18,14 +23,21 @@ export function ArtifactPanel({
   artifact,
   selectedFilePath,
   selectedFilePaths,
+  selectedChangePath,
+  selectedChangePaths,
   isApplying,
   applyResult,
   applyErrorMessage,
   onSelectFile,
   onToggleFile,
+  onSelectChange,
+  onToggleChange,
   onApplySelected,
 }: ArtifactPanelProps) {
   const selectedFile = artifact.files.find((file) => file.path === selectedFilePath) ?? artifact.files[0]
+  const selectedChange = artifact.changes.find((change) => change.path === selectedChangePath) ?? null
+  const totalSelectableCount = artifact.files.length + artifact.changes.length
+  const selectedCount = selectedFilePaths.length + selectedChangePaths.length
 
   return (
     <section className="panel artifact-panel">
@@ -52,7 +64,7 @@ export function ArtifactPanel({
         <h3>Files</h3>
         <ul className="artifact-list file-list">
           {artifact.files.map((file) => {
-            const isPreviewed = file.path === selectedFile?.path
+            const isPreviewed = !selectedChange && file.path === selectedFile?.path
             const isChecked = selectedFilePaths.includes(file.path)
 
             return (
@@ -78,13 +90,48 @@ export function ArtifactPanel({
             )
           })}
         </ul>
-        {selectedFile ? <FilePreview file={selectedFile} /> : null}
       </section>
 
-      {artifact.files.length > 0 ? (
+      {artifact.changes.length > 0 ? (
+        <section className="artifact-section">
+          <h3>Existing File Changes</h3>
+          <ul className="artifact-list file-list">
+            {artifact.changes.map((change) => {
+              const isPreviewed = change.path === selectedChange?.path
+              const isChecked = selectedChangePaths.includes(change.path)
+
+              return (
+                <li key={`${change.mode}:${change.path}`} className="file-list-item">
+                  <div className="file-select-row">
+                    <input
+                      type="checkbox"
+                      aria-label={`change ${change.path}`}
+                      checked={isChecked}
+                      onChange={() => onToggleChange(change.path)}
+                    />
+                    <button
+                      type="button"
+                      className={`file-select-button${isPreviewed ? ' is-selected' : ''}`}
+                      aria-pressed={isPreviewed}
+                      onClick={() => onSelectChange(change.path)}
+                    >
+                      {`change ${change.path}`}
+                    </button>
+                  </div>
+                  <p>{change.reason}</p>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      ) : null}
+
+      {selectedChange ? <ChangePreview change={selectedChange} /> : selectedFile ? <FilePreview file={selectedFile} /> : null}
+
+      {totalSelectableCount > 0 ? (
         <ApplyPanel
-          selectedCount={selectedFilePaths.length}
-          totalCount={artifact.files.length}
+          selectedCount={selectedCount}
+          totalCount={totalSelectableCount}
           isApplying={isApplying}
           applyResult={applyResult}
           applyErrorMessage={applyErrorMessage}

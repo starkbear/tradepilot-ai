@@ -13,6 +13,26 @@ const GENERATED_ARTIFACT = {
     { path: 'README.md', purpose: 'docs', content: '# Demo', selected: true },
     { path: 'backend/app/main.py', purpose: 'backend entry', content: 'print("hi")', selected: true },
   ],
+  changes: [
+    {
+      path: 'backend/app/main.py',
+      mode: 'patch',
+      reason: 'Register router.',
+      old_snippet: 'print("hi")',
+      new_content: 'print("hi")\nprint("router")',
+      selected: true,
+      replace_all_matches: false,
+    },
+    {
+      path: 'frontend/src/App.tsx',
+      mode: 'rewrite',
+      reason: 'Replace app shell.',
+      old_snippet: null,
+      new_content: 'export function App() { return <main /> }',
+      selected: true,
+      replace_all_matches: false,
+    },
+  ],
   warnings: ['Placeholder provider response in use.'],
   next_steps: ['Review generated files'],
 }
@@ -94,11 +114,11 @@ describe('App', () => {
     render(<App />)
     await generateArtifact(user)
 
-    expect(screen.getByRole('checkbox', { name: /README.md/i })).toBeChecked()
-    expect(screen.getByRole('checkbox', { name: /backend\/app\/main.py/i })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'README.md' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'backend/app/main.py' })).toBeChecked()
   })
 
-  it('applies only the still-selected files', async () => {
+  it('applies only the still-selected files and changes', async () => {
     const user = userEvent.setup()
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(
@@ -120,6 +140,8 @@ describe('App', () => {
             message: 'files applied',
             data: {
               applied: ['backend/app/main.py'],
+              applied_files: ['backend/app/main.py'],
+              applied_changes: ['backend/app/main.py'],
               skipped: [],
               errors: [],
             },
@@ -133,6 +155,7 @@ describe('App', () => {
     await generateArtifact(user)
 
     await user.click(screen.getByRole('checkbox', { name: /README.md/i }))
+    await user.click(screen.getByRole('checkbox', { name: /change frontend\/src\/app.tsx/i }))
     await user.click(screen.getByRole('button', { name: /apply selected files/i }))
 
     await waitFor(() => {
@@ -142,6 +165,8 @@ describe('App', () => {
     const applyRequest = JSON.parse(fetchMock.mock.calls[1][1]?.body as string)
     expect(applyRequest.files).toHaveLength(1)
     expect(applyRequest.files[0].path).toBe('backend/app/main.py')
+    expect(applyRequest.changes).toHaveLength(1)
+    expect(applyRequest.changes[0].path).toBe('backend/app/main.py')
   })
 
   it('shows the apply result summary after files are applied', async () => {
@@ -168,6 +193,8 @@ describe('App', () => {
               message: 'files applied',
               data: {
                 applied: ['README.md'],
+                applied_files: ['README.md'],
+                applied_changes: [],
                 skipped: ['backend/app/main.py'],
                 errors: ['Could not write config/local.env'],
               },
