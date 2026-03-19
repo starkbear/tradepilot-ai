@@ -1,4 +1,4 @@
-import type { ApplyResult, FileDraft, GenerationArtifact } from './types'
+import type { ApplyResult, FileChangeDraft, FileDraft, GenerationArtifact } from './types'
 
 type GenerateRequest = {
   message: string
@@ -10,6 +10,7 @@ type GenerateRequest = {
 type ApplyFilesRequest = {
   workspacePath: string
   files: FileDraft[]
+  changes: FileChangeDraft[]
 }
 
 type ApiEnvelope<T> = {
@@ -51,6 +52,7 @@ export async function applyFiles(request: ApplyFilesRequest): Promise<ApplyResul
     body: JSON.stringify({
       workspace_path: request.workspacePath,
       files: request.files,
+      changes: request.changes,
     }),
   })
 
