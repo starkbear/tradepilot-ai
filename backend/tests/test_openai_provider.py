@@ -51,6 +51,41 @@ def test_generate_returns_dict_from_valid_openai_json(monkeypatch) -> None:
     assert result['project_tree'] == ['frontend/']
 
 
+def test_generate_normalizes_low_risk_list_shape_drift(monkeypatch) -> None:
+    provider = OpenAIProvider()
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                'choices': [
+                    {
+                        'message': {
+                            'content': '{"assistant_message":"ok","summary":"done","architecture":"split","project_tree":{"frontend/":"React app"},"files":[],"warnings":"Use sandbox data only.","next_steps":"Add auth."}'
+                        }
+                    }
+                ]
+            }
+
+    monkeypatch.setenv('OPENAI_API_KEY', 'test-key')
+    monkeypatch.setattr(
+        openai_provider_module,
+        'httpx',
+        types.SimpleNamespace(post=lambda *args, **kwargs: FakeResponse()),
+        raising=False,
+    )
+
+    result = provider.generate(build_prompt_bundle())
+
+    assert result['project_tree'] == ['frontend/: React app']
+    assert result['warnings'] == ['Use sandbox data only.']
+    assert result['next_steps'] == ['Add auth.']
+
+
 def test_generate_raises_value_error_on_invalid_json(monkeypatch) -> None:
     provider = OpenAIProvider()
 
@@ -118,6 +153,38 @@ def test_generate_raises_value_error_on_schema_invalid_payload(monkeypatch) -> N
                     {
                         'message': {
                             'content': '{"assistant_message":"ok","summary":"done","project_tree":["frontend/"],"files":[],"warnings":[],"next_steps":[]}'
+                        }
+                    }
+                ]
+            }
+
+    monkeypatch.setenv('OPENAI_API_KEY', 'test-key')
+    monkeypatch.setattr(
+        openai_provider_module,
+        'httpx',
+        types.SimpleNamespace(post=lambda *args, **kwargs: FakeResponse()),
+        raising=False,
+    )
+
+    with pytest.raises(ValueError):
+        provider.generate(build_prompt_bundle())
+
+
+def test_generate_raises_value_error_on_malformed_files_payload(monkeypatch) -> None:
+    provider = OpenAIProvider()
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                'choices': [
+                    {
+                        'message': {
+                            'content': '{"assistant_message":"ok","summary":"done","architecture":"split","project_tree":["frontend/"],"files":["README.md"],"warnings":[],"next_steps":[]}'
                         }
                     }
                 ]
