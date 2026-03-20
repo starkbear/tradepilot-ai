@@ -143,8 +143,10 @@ describe('ArtifactPanel', () => {
     expect(patchPreview).not.toBeNull()
     const patchPreviewScope = within(patchPreview as HTMLElement)
     expect(patchPreviewScope.getByText(/register the router/i)).toBeInTheDocument()
-    expect(patchPreviewScope.getByText(/app.include_router\(router\)/i)).toBeInTheDocument()
-    expect(patchPreview).toHaveTextContent('app = FastAPI()')
+    expect(patchPreviewScope.getByText(/mode: patch/i)).toBeInTheDocument()
+    expect(patchPreviewScope.getByRole('region', { name: /patch diff preview/i })).toHaveTextContent(/app = FastAPI\(\)/)
+    expect(patchPreviewScope.getByRole('region', { name: /patch diff preview/i })).toHaveTextContent(/\+app\.include_router\(router\)/)
+    expect(patchPreviewScope.queryByRole('heading', { name: /current snippet/i })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /change frontend\/src\/app.tsx/i }))
     expect(onSelectChange).toHaveBeenCalledWith('frontend/src/App.tsx')

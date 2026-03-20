@@ -1,4 +1,5 @@
 import type { FileChangeDraft } from '../lib/types'
+import { PatchDiffPreview } from './PatchDiffPreview'
 
 type ChangePreviewProps = {
   change: FileChangeDraft
@@ -11,14 +12,14 @@ export function ChangePreview({ change }: ChangePreviewProps) {
       <p className="preview-path">{change.path}</p>
       <p>{change.reason}</p>
       <p>Mode: {change.mode}</p>
-      {change.old_snippet ? (
+      {change.mode === 'patch' ? (
+        <PatchDiffPreview oldSnippet={change.old_snippet} newContent={change.new_content} />
+      ) : (
         <>
-          <h4>Current Snippet</h4>
-          <pre>{change.old_snippet}</pre>
+          <h4>New Content</h4>
+          <pre>{change.new_content}</pre>
         </>
-      ) : null}
-      <h4>New Content</h4>
-      <pre>{change.new_content}</pre>
+      )}
     </article>
   )
 }
