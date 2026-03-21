@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -138,13 +138,15 @@ describe('App', () => {
           body: {
             success: true,
             message: 'files applied',
-            data: {
-              applied: ['backend/app/main.py'],
-              applied_files: ['backend/app/main.py'],
-              applied_changes: ['backend/app/main.py'],
-              skipped: [],
-              errors: [],
-            },
+              data: {
+                validated: ['backend/app/main.py'],
+                applied: ['backend/app/main.py'],
+                applied_files: ['backend/app/main.py'],
+                applied_changes: ['backend/app/main.py'],
+                skipped: [],
+                issues: [],
+                errors: [],
+              },
             errors: [],
           },
         }),
@@ -192,11 +194,21 @@ describe('App', () => {
               success: true,
               message: 'files applied',
               data: {
+                validated: ['README.md'],
                 applied: ['README.md'],
                 applied_files: ['README.md'],
                 applied_changes: [],
                 skipped: ['backend/app/main.py'],
-                errors: ['Could not write config/local.env'],
+                issues: [
+                  {
+                    path: 'backend/app/main.py',
+                    stage: 'validation',
+                    kind: 'snippet_not_found',
+                    message: 'Generated patch no longer matches the current file content.',
+                    suggestion: 'Regenerate this change or preview the latest file state before applying again.',
+                  },
+                ],
+                errors: [],
               },
               errors: [],
             },
@@ -209,8 +221,14 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /apply selected files/i }))
 
     expect(await screen.findByText(/applied: 1/i)).toBeInTheDocument()
+    expect(screen.getByText(/validated: 1/i)).toBeInTheDocument()
     expect(screen.getByText(/skipped: 1/i)).toBeInTheDocument()
-    expect(screen.getByText(/errors: 1/i)).toBeInTheDocument()
+    expect(screen.getByText(/issues: 1/i)).toBeInTheDocument()
+    const issueItem = screen.getByText(/generated patch no longer matches the current file content/i).closest('li')
+    expect(issueItem).not.toBeNull()
+    const issueScope = within(issueItem as HTMLElement)
+    expect(issueScope.getByText(/backend\/app\/main.py/i)).toBeInTheDocument()
+    expect(issueScope.getByText(/regenerate this change or preview the latest file state before applying again/i)).toBeInTheDocument()
   })
 
   it('shows setup guidance when the openai api key is missing', async () => {

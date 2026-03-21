@@ -38,8 +38,9 @@ def test_apply_selected_files_supports_mixed_files_and_changes(tmp_path: Path) -
                 },
                 {
                     'path': 'frontend/src/App.tsx',
-                    'mode': 'rewrite',
+                    'mode': 'patch',
                     'reason': 'Replace app shell.',
+                    'old_snippet': 'missing shell\n',
                     'new_content': 'export function App() { return <main /> }',
                     'selected': True,
                 },
@@ -49,9 +50,13 @@ def test_apply_selected_files_supports_mixed_files_and_changes(tmp_path: Path) -
 
     assert response.status_code == 200
     payload = response.json()['data']
+    assert payload['validated'] == ['backend/app/main.py', 'README.md']
     assert 'README.md' in payload['applied']
     assert 'backend/app/main.py' in payload['applied_changes']
-    assert 'frontend/src/App.tsx' in payload['applied_changes']
+    assert 'frontend/src/App.tsx' not in payload['applied_changes']
+    assert payload['issues'][0]['path'] == 'frontend/src/App.tsx'
+    assert payload['issues'][0]['stage'] == 'validation'
+    assert payload['issues'][0]['kind'] == 'snippet_not_found'
     assert (tmp_path / 'README.md').read_text(encoding='utf-8') == '# Demo'
     assert existing_file.read_text(encoding='utf-8') == 'app = FastAPI()\napp.include_router(router)\n'
-    assert rewrite_file.read_text(encoding='utf-8') == 'export function App() { return <main /> }'
+    assert rewrite_file.read_text(encoding='utf-8') == 'export function App() { return null }'
