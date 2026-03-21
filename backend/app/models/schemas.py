@@ -68,9 +68,19 @@ class ApplyFilesRequest(BaseModel):
     changes: list[FileChangeDraft] = Field(default_factory=list)
 
 
+class ApplyIssue(BaseModel):
+    path: str
+    stage: Literal['validation', 'apply']
+    kind: str
+    message: str
+    suggestion: str
+
+
 class ApplyResult(BaseModel):
+    validated: list[str] = Field(default_factory=list)
     applied: list[str] = Field(default_factory=list)
     applied_files: list[str] = Field(default_factory=list)
     applied_changes: list[str] = Field(default_factory=list)
     skipped: list[str] = Field(default_factory=list)
+    issues: list[ApplyIssue] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
