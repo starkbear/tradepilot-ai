@@ -34,9 +34,21 @@ export function ApplyPanel({
 
       {applyResult ? (
         <div className="apply-result-summary">
-          <p>Applied: {applyResult.applied.length}</p>
-          <p>Skipped: {applyResult.skipped.length}</p>
-          <p>Errors: {applyResult.errors.length}</p>
+          <p>{`Validated: ${applyResult.validated.length}`}</p>
+          <p>{`Applied: ${applyResult.applied.length}`}</p>
+          <p>{`Skipped: ${applyResult.skipped.length}`}</p>
+          <p>{`Issues: ${applyResult.issues.length}`}</p>
+          {applyResult.issues.length > 0 ? (
+            <ul className="artifact-list">
+              {applyResult.issues.map((issue) => (
+                <li key={`${issue.stage}:${issue.kind}:${issue.path}`}>
+                  <p>{issue.path}</p>
+                  <p>{issue.message}</p>
+                  <p>{issue.suggestion}</p>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : null}
     </section>

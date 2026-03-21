@@ -28,10 +28,20 @@ export type GenerationArtifact = {
   next_steps: string[]
 }
 
+export type ApplyIssue = {
+  path: string
+  stage: 'validation' | 'apply'
+  kind: string
+  message: string
+  suggestion: string
+}
+
 export type ApplyResult = {
+  validated: string[]
   applied: string[]
   applied_files: string[]
   applied_changes: string[]
   skipped: string[]
+  issues: ApplyIssue[]
   errors: string[]
 }
