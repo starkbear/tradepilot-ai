@@ -70,6 +70,19 @@ export async function loadSession(): Promise<PersistedSessionSnapshot> {
   return payload.data
 }
 
+export async function clearSession(): Promise<PersistedSessionSnapshot> {
+  const response = await fetch('/api/session', {
+    method: 'DELETE',
+  })
+  const payload = (await response.json()) as ApiEnvelope<PersistedSessionSnapshot | null>
+
+  if (!response.ok || !payload.success || !payload.data) {
+    throw new Error(payload.message || 'Clearing session failed')
+  }
+
+  return payload.data
+}
+
 export async function loginLocalSession(request: LoginRequest): Promise<PersistedSessionSnapshot> {
   const response = await fetch('/api/auth/login', {
     method: 'POST',

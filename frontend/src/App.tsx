@@ -4,7 +4,7 @@ import { ArtifactPanel } from './components/ArtifactPanel'
 import { LoginShell } from './components/LoginShell'
 import { WorkspacePanel } from './components/WorkspacePanel'
 import { DEFAULT_MODEL, DEFAULT_PROVIDER_ID } from './lib/defaults'
-import { applyFiles, generateArtifact, loadSession, loginLocalSession, readWorkspaceFile } from './lib/api'
+import { applyFiles, clearSession, generateArtifact, loadSession, loginLocalSession, readWorkspaceFile } from './lib/api'
 import type { ApplyResult, GenerationArtifact, PersistedSessionSnapshot, ScreenState } from './lib/types'
 
 export default function App() {
@@ -12,6 +12,7 @@ export default function App() {
   const [displayName, setDisplayName] = useState('')
   const [workspacePath, setWorkspacePath] = useState('')
   const [goal, setGoal] = useState('')
+  const [recentWorkspaces, setRecentWorkspaces] = useState<string[]>([])
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [artifact, setArtifact] = useState<GenerationArtifact | null>(null)
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null)
@@ -20,6 +21,7 @@ export default function App() {
   const [selectedChangePaths, setSelectedChangePaths] = useState<string[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
+  const [isClearingSession, setIsClearingSession] = useState(false)
   const [applyResult, setApplyResult] = useState<ApplyResult | null>(null)
   const [applyErrorMessage, setApplyErrorMessage] = useState<string | null>(null)
   const [rewritePreviewStatus, setRewritePreviewStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
@@ -37,6 +39,7 @@ export default function App() {
     setScreen(snapshot.screen)
     setWorkspacePath(snapshot.workspace_path)
     setGoal(snapshot.goal)
+    setRecentWorkspaces(snapshot.recent_workspaces)
     setArtifact(snapshot.artifact)
     setApplyResult(snapshot.apply_result)
     setApplyErrorMessage(null)
@@ -162,6 +165,18 @@ export default function App() {
     applyRestoredSession(snapshot)
   }
 
+  async function handleClearSession() {
+    setIsClearingSession(true)
+    try {
+      const snapshot = await clearSession()
+      applyRestoredSession(snapshot)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Clearing session failed')
+    } finally {
+      setIsClearingSession(false)
+    }
+  }
+
   function handleToggleFile(path: string) {
     setSelectedFilePaths((current) =>
       current.includes(path) ? current.filter((entry) => entry !== path) : [...current, path],
@@ -227,11 +242,15 @@ export default function App() {
           <WorkspacePanel
             workspacePath={workspacePath}
             goal={goal}
+            recentWorkspaces={recentWorkspaces}
             errorMessage={errorMessage}
             isGenerating={isGenerating}
+            isClearingSession={isClearingSession}
             onWorkspacePathChange={setWorkspacePath}
             onGoalChange={setGoal}
             onGenerate={handleGenerate}
+            onSelectRecentWorkspace={setWorkspacePath}
+            onClearSession={handleClearSession}
           />
           {artifact ? (
             <ArtifactPanel

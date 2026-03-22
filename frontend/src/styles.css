@@ -81,9 +81,44 @@ button:disabled {
   opacity: 0.55;
 }
 
+.secondary-button {
+  background: rgba(21, 36, 51, 0.08);
+  color: #152433;
+}
+
 .error-message {
   color: #9a2f2f;
   font-weight: 600;
+}
+
+.workspace-shortcuts {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: -0.25rem;
+}
+
+.workspace-shortcuts h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.workspace-shortcut-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.workspace-shortcut {
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(30, 93, 79, 0.12);
+  color: #1e5d4f;
+}
+
+.workspace-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .setup-notice {

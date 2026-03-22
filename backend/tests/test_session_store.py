@@ -35,3 +35,22 @@ def test_session_store_persists_and_reloads_snapshot(tmp_path: Path) -> None:
     assert reloaded.workspace_path == 'D:/Codex/Trading assistant'
     assert reloaded.goal == 'Continue improving the trading assistant'
     assert reloaded.selected_file_paths == ['README.md']
+
+
+def test_session_store_clear_resets_snapshot_and_removes_file(tmp_path: Path) -> None:
+    session_file = tmp_path / '.local' / 'session.json'
+    store = SessionStore(session_file)
+    store.save(
+        PersistedSessionSnapshot(
+            display_name='Wei',
+            screen='workspace',
+            workspace_path='D:/Codex/Trading assistant',
+        )
+    )
+
+    cleared = store.clear()
+
+    assert cleared.display_name == ''
+    assert cleared.screen == 'login'
+    assert cleared.workspace_path == ''
+    assert not session_file.exists()

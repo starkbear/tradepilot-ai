@@ -26,3 +26,26 @@ def test_get_session_returns_default_snapshot(monkeypatch, tmp_path: Path) -> No
     assert payload['display_name'] == ''
     assert payload['screen'] == 'login'
     assert payload['artifact'] is None
+
+
+def test_delete_session_clears_persisted_snapshot(monkeypatch, tmp_path: Path) -> None:
+    store = install_temp_session_store(monkeypatch, tmp_path)
+    store.save(
+        store.get_session().model_copy(
+            update={
+                'display_name': 'Wei',
+                'screen': 'workspace',
+                'workspace_path': 'D:/Codex/Trading assistant',
+                'recent_workspaces': ['D:/Codex/Trading assistant'],
+            }
+        )
+    )
+    client = TestClient(app)
+
+    response = client.delete('/api/session')
+
+    assert response.status_code == 200
+    payload = response.json()['data']
+    assert payload['display_name'] == ''
+    assert payload['screen'] == 'login'
+    assert payload['recent_workspaces'] == []
