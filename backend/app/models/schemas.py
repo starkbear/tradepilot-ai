@@ -68,6 +68,16 @@ class ApplyFilesRequest(BaseModel):
     changes: list[FileChangeDraft] = Field(default_factory=list)
 
 
+class ReadFileRequest(BaseModel):
+    workspace_path: str
+    path: str
+
+
+class ReadFileResult(BaseModel):
+    path: str
+    content: str
+
+
 class ApplyIssue(BaseModel):
     path: str
     stage: Literal['validation', 'apply']

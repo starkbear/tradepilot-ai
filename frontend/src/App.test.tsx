@@ -94,6 +94,93 @@ describe('App', () => {
     expect(screen.getByText(/review generated files/i)).toBeInTheDocument()
   })
 
+  it('loads the current file and shows a diff preview for rewrite changes', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: true,
+          body: {
+            success: true,
+            message: 'generation complete',
+            data: GENERATED_ARTIFACT,
+            errors: [],
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: true,
+          body: {
+            success: true,
+            message: 'file loaded',
+            data: {
+              path: 'frontend/src/App.tsx',
+              content: 'export function App() { return <div /> }',
+            },
+            errors: [],
+          },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+    await generateArtifact(user)
+    await user.click(screen.getByRole('button', { name: /change frontend\/src\/app.tsx/i }))
+
+    expect(await screen.findByRole('region', { name: /rewrite diff preview/i })).toHaveTextContent(
+      /-export function App\(\) \{ return <div \/> \}/,
+    )
+    expect(screen.getByRole('region', { name: /rewrite diff preview/i })).toHaveTextContent(
+      /\+export function App\(\) \{ return <main \/> \}/,
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/files/read',
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    )
+  })
+
+  it('falls back to raw new content when rewrite preview loading fails', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: true,
+          body: {
+            success: true,
+            message: 'generation complete',
+            data: GENERATED_ARTIFACT,
+            errors: [],
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: false,
+          status: 404,
+          body: {
+            success: false,
+            message: 'Target file does not exist.',
+            data: null,
+            errors: ['Target file does not exist.'],
+          },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+    await generateArtifact(user)
+    await user.click(screen.getByRole('button', { name: /change frontend\/src\/app.tsx/i }))
+
+    expect(await screen.findByText(/current file preview unavailable/i)).toBeInTheDocument()
+    expect(screen.getByText(/export function App\(\) \{ return <main \/> \}/i)).toBeInTheDocument()
+  })
+
   it('selects all generated files by default after generation', async () => {
     const user = userEvent.setup()
     vi.stubGlobal(
