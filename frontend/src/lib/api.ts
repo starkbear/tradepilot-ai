@@ -1,4 +1,15 @@
-import type { ApplyResult, FileChangeDraft, FileDraft, GenerationArtifact, ReadFileResult } from './types'
+import type {
+  ApplyResult,
+  FileChangeDraft,
+  FileDraft,
+  GenerationArtifact,
+  PersistedSessionSnapshot,
+  ReadFileResult,
+} from './types'
+
+type LoginRequest = {
+  displayName: string
+}
 
 type GenerateRequest = {
   message: string
@@ -43,6 +54,37 @@ export async function generateArtifact(request: GenerateRequest): Promise<Genera
 
   if (!response.ok || !payload.success || !payload.data) {
     throw new Error(payload.message || 'Generation failed')
+  }
+
+  return payload.data
+}
+
+export async function loadSession(): Promise<PersistedSessionSnapshot> {
+  const response = await fetch('/api/session')
+  const payload = (await response.json()) as ApiEnvelope<PersistedSessionSnapshot | null>
+
+  if (!response.ok || !payload.success || !payload.data) {
+    throw new Error(payload.message || 'Loading session failed')
+  }
+
+  return payload.data
+}
+
+export async function loginLocalSession(request: LoginRequest): Promise<PersistedSessionSnapshot> {
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      display_name: request.displayName,
+    }),
+  })
+
+  const payload = (await response.json()) as ApiEnvelope<PersistedSessionSnapshot | null>
+
+  if (!response.ok || !payload.success || !payload.data) {
+    throw new Error(payload.message || 'Login failed')
   }
 
   return payload.data

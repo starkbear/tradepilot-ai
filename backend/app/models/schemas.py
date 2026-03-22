@@ -14,6 +14,21 @@ class LocalUserSession(BaseModel):
     preferred_provider: str = 'openai'
 
 
+class PersistedSessionSnapshot(BaseModel):
+    display_name: str = ''
+    recent_workspaces: list[str] = Field(default_factory=list)
+    preferred_provider: str = 'openai'
+    screen: Literal['login', 'workspace'] = 'login'
+    workspace_path: str = ''
+    goal: str = ''
+    artifact: 'GenerationArtifact | None' = None
+    selected_file_paths: list[str] = Field(default_factory=list)
+    selected_change_paths: list[str] = Field(default_factory=list)
+    selected_file_path: str | None = None
+    selected_change_path: str | None = None
+    apply_result: 'ApplyResult | None' = None
+
+
 class ProviderInfo(BaseModel):
     id: str
     label: str
@@ -94,3 +109,6 @@ class ApplyResult(BaseModel):
     skipped: list[str] = Field(default_factory=list)
     issues: list[ApplyIssue] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
+
+
+PersistedSessionSnapshot.model_rebuild()

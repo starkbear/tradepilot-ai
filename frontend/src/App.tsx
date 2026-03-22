@@ -4,8 +4,8 @@ import { ArtifactPanel } from './components/ArtifactPanel'
 import { LoginShell } from './components/LoginShell'
 import { WorkspacePanel } from './components/WorkspacePanel'
 import { DEFAULT_MODEL, DEFAULT_PROVIDER_ID } from './lib/defaults'
-import { applyFiles, generateArtifact, readWorkspaceFile } from './lib/api'
-import type { ApplyResult, GenerationArtifact, ScreenState } from './lib/types'
+import { applyFiles, generateArtifact, loadSession, loginLocalSession, readWorkspaceFile } from './lib/api'
+import type { ApplyResult, GenerationArtifact, PersistedSessionSnapshot, ScreenState } from './lib/types'
 
 export default function App() {
   const [screen, setScreen] = useState<ScreenState>('login')
@@ -26,14 +26,36 @@ export default function App() {
   const [rewritePreviewCurrentContent, setRewritePreviewCurrentContent] = useState<string | null>(null)
   const [rewritePreviewError, setRewritePreviewError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (artifact) {
-      setSelectedFilePath(artifact.files[0]?.path ?? null)
-      setSelectedFilePaths(artifact.files.map((file) => file.path))
-      setSelectedChangePath(null)
-      setSelectedChangePaths(artifact.changes.map((change) => change.path))
-      setApplyResult(null)
-      setApplyErrorMessage(null)
+  function resetPreviewState() {
+    setRewritePreviewStatus('idle')
+    setRewritePreviewCurrentContent(null)
+    setRewritePreviewError(null)
+  }
+
+  function applyRestoredSession(snapshot: PersistedSessionSnapshot) {
+    setDisplayName(snapshot.display_name)
+    setScreen(snapshot.screen)
+    setWorkspacePath(snapshot.workspace_path)
+    setGoal(snapshot.goal)
+    setArtifact(snapshot.artifact)
+    setApplyResult(snapshot.apply_result)
+    setApplyErrorMessage(null)
+    setErrorMessage(null)
+    resetPreviewState()
+
+    if (snapshot.artifact) {
+      setSelectedFilePath(snapshot.selected_file_path ?? snapshot.artifact.files[0]?.path ?? null)
+      setSelectedFilePaths(
+        snapshot.selected_file_paths.length > 0
+          ? snapshot.selected_file_paths
+          : snapshot.artifact.files.map((file) => file.path),
+      )
+      setSelectedChangePath(snapshot.selected_change_path)
+      setSelectedChangePaths(
+        snapshot.selected_change_paths.length > 0
+          ? snapshot.selected_change_paths
+          : snapshot.artifact.changes.map((change) => change.path),
+      )
       return
     }
 
@@ -41,7 +63,36 @@ export default function App() {
     setSelectedFilePaths([])
     setSelectedChangePath(null)
     setSelectedChangePaths([])
-  }, [artifact])
+  }
+
+  function applyGeneratedArtifact(nextArtifact: GenerationArtifact) {
+    setArtifact(nextArtifact)
+    setSelectedFilePath(nextArtifact.files[0]?.path ?? null)
+    setSelectedFilePaths(nextArtifact.files.map((file) => file.path))
+    setSelectedChangePath(null)
+    setSelectedChangePaths(nextArtifact.changes.map((change) => change.path))
+    setApplyResult(null)
+    setApplyErrorMessage(null)
+    resetPreviewState()
+  }
+
+  useEffect(() => {
+    let isCancelled = false
+
+    loadSession()
+      .then((snapshot) => {
+        if (!isCancelled) {
+          applyRestoredSession(snapshot)
+        }
+      })
+      .catch(() => {
+        // Fall back to the blank login flow when no persisted session is available.
+      })
+
+    return () => {
+      isCancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     const selectedChange = artifact?.changes.find((change) => change.path === selectedChangePath) ?? null
@@ -98,12 +149,17 @@ export default function App() {
         providerId: DEFAULT_PROVIDER_ID,
         model: DEFAULT_MODEL,
       })
-      setArtifact(nextArtifact)
+      applyGeneratedArtifact(nextArtifact)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Generation failed')
     } finally {
       setIsGenerating(false)
     }
+  }
+
+  async function handleContinue() {
+    const snapshot = await loginLocalSession({ displayName })
+    applyRestoredSession(snapshot)
   }
 
   function handleToggleFile(path: string) {
@@ -164,7 +220,7 @@ export default function App() {
         <LoginShell
           displayName={displayName}
           onDisplayNameChange={setDisplayName}
-          onContinue={() => setScreen('workspace')}
+          onContinue={handleContinue}
         />
       ) : (
         <section className="workspace-layout">

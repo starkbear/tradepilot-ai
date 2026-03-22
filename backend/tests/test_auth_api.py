@@ -11,3 +11,4 @@ def test_login_persists_local_session() -> None:
     payload = response.json()['data']
     assert payload['display_name'] == 'Wei'
     assert payload['recent_workspaces'] == []
+    assert payload['screen'] == 'workspace'

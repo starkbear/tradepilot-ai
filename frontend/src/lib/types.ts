@@ -50,3 +50,18 @@ export type ReadFileResult = {
   path: string
   content: string
 }
+
+export type PersistedSessionSnapshot = {
+  display_name: string
+  recent_workspaces: string[]
+  preferred_provider: string
+  screen: ScreenState
+  workspace_path: string
+  goal: string
+  artifact: GenerationArtifact | null
+  selected_file_paths: string[]
+  selected_change_paths: string[]
+  selected_file_path: string | null
+  selected_change_path: string | null
+  apply_result: ApplyResult | null
+}
