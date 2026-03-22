@@ -45,3 +45,8 @@ export type ApplyResult = {
   issues: ApplyIssue[]
   errors: string[]
 }
+
+export type ReadFileResult = {
+  path: string
+  content: string
+}

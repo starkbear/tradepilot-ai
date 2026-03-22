@@ -4,7 +4,7 @@ import { ArtifactPanel } from './components/ArtifactPanel'
 import { LoginShell } from './components/LoginShell'
 import { WorkspacePanel } from './components/WorkspacePanel'
 import { DEFAULT_MODEL, DEFAULT_PROVIDER_ID } from './lib/defaults'
-import { applyFiles, generateArtifact } from './lib/api'
+import { applyFiles, generateArtifact, readWorkspaceFile } from './lib/api'
 import type { ApplyResult, GenerationArtifact, ScreenState } from './lib/types'
 
 export default function App() {
@@ -22,6 +22,9 @@ export default function App() {
   const [isApplying, setIsApplying] = useState(false)
   const [applyResult, setApplyResult] = useState<ApplyResult | null>(null)
   const [applyErrorMessage, setApplyErrorMessage] = useState<string | null>(null)
+  const [rewritePreviewStatus, setRewritePreviewStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
+  const [rewritePreviewCurrentContent, setRewritePreviewCurrentContent] = useState<string | null>(null)
+  const [rewritePreviewError, setRewritePreviewError] = useState<string | null>(null)
 
   useEffect(() => {
     if (artifact) {
@@ -39,6 +42,48 @@ export default function App() {
     setSelectedChangePath(null)
     setSelectedChangePaths([])
   }, [artifact])
+
+  useEffect(() => {
+    const selectedChange = artifact?.changes.find((change) => change.path === selectedChangePath) ?? null
+
+    if (!selectedChange || selectedChange.mode !== 'rewrite') {
+      setRewritePreviewStatus('idle')
+      setRewritePreviewCurrentContent(null)
+      setRewritePreviewError(null)
+      return
+    }
+
+    let isCancelled = false
+    setRewritePreviewStatus('loading')
+    setRewritePreviewCurrentContent(null)
+    setRewritePreviewError(null)
+
+    readWorkspaceFile({
+      workspacePath,
+      path: selectedChange.path,
+    })
+      .then((result) => {
+        if (isCancelled) {
+          return
+        }
+
+        setRewritePreviewStatus('ready')
+        setRewritePreviewCurrentContent(result.content)
+      })
+      .catch((error) => {
+        if (isCancelled) {
+          return
+        }
+
+        setRewritePreviewStatus('error')
+        setRewritePreviewCurrentContent(null)
+        setRewritePreviewError(error instanceof Error ? error.message : 'Reading file failed')
+      })
+
+    return () => {
+      isCancelled = true
+    }
+  }, [artifact, selectedChangePath, workspacePath])
 
   async function handleGenerate() {
     setErrorMessage(null)
@@ -139,6 +184,9 @@ export default function App() {
               selectedFilePaths={selectedFilePaths}
               selectedChangePath={selectedChangePath}
               selectedChangePaths={selectedChangePaths}
+              rewritePreviewStatus={rewritePreviewStatus}
+              rewritePreviewCurrentContent={rewritePreviewCurrentContent}
+              rewritePreviewError={rewritePreviewError}
               isApplying={isApplying}
               applyResult={applyResult}
               applyErrorMessage={applyErrorMessage}

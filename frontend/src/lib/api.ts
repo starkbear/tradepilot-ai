@@ -1,4 +1,4 @@
-import type { ApplyResult, FileChangeDraft, FileDraft, GenerationArtifact } from './types'
+import type { ApplyResult, FileChangeDraft, FileDraft, GenerationArtifact, ReadFileResult } from './types'
 
 type GenerateRequest = {
   message: string
@@ -11,6 +11,11 @@ type ApplyFilesRequest = {
   workspacePath: string
   files: FileDraft[]
   changes: FileChangeDraft[]
+}
+
+type ReadFileRequest = {
+  workspacePath: string
+  path: string
 }
 
 type ApiEnvelope<T> = {
@@ -60,6 +65,27 @@ export async function applyFiles(request: ApplyFilesRequest): Promise<ApplyResul
 
   if (!response.ok || !payload.success || !payload.data) {
     throw new Error(payload.message || 'Applying files failed')
+  }
+
+  return payload.data
+}
+
+export async function readWorkspaceFile(request: ReadFileRequest): Promise<ReadFileResult> {
+  const response = await fetch('/api/files/read', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      workspace_path: request.workspacePath,
+      path: request.path,
+    }),
+  })
+
+  const payload = (await response.json()) as ApiEnvelope<ReadFileResult | null>
+
+  if (!response.ok || !payload.success || !payload.data) {
+    throw new Error(payload.message || 'Reading file failed')
   }
 
   return payload.data

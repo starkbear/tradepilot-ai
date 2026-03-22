@@ -1,9 +1,50 @@
-﻿from fastapi import APIRouter
+from pathlib import Path
 
-from app.models.schemas import ApplyFilesRequest, ApplyResult
-from app.services.workspace_fs import apply_changes, apply_files
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
+
+from app.models.schemas import ApplyFilesRequest, ApplyResult, ReadFileRequest, ReadFileResult
+from app.services.workspace_fs import apply_changes, apply_files, validate_relative_path
 
 router = APIRouter(prefix='/api/files', tags=['files'])
+
+
+@router.post('/read')
+def read_selected_file(payload: ReadFileRequest) -> dict:
+    workspace = Path(payload.workspace_path)
+
+    try:
+        target = validate_relative_path(workspace, payload.path)
+    except ValueError as exc:
+        return JSONResponse(
+            status_code=400,
+            content={
+                'success': False,
+                'message': str(exc),
+                'data': None,
+                'errors': [str(exc)],
+            },
+        )
+
+    if not target.exists() or not target.is_file():
+        message = 'Target file does not exist.'
+        return JSONResponse(
+            status_code=404,
+            content={
+                'success': False,
+                'message': message,
+                'data': None,
+                'errors': [message],
+            },
+        )
+
+    result = ReadFileResult(path=payload.path, content=target.read_text(encoding='utf-8'))
+    return {
+        'success': True,
+        'message': 'file loaded',
+        'data': result.model_dump(),
+        'errors': [],
+    }
 
 
 @router.post('/apply')

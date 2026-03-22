@@ -9,6 +9,9 @@ type ArtifactPanelProps = {
   selectedFilePaths: string[]
   selectedChangePath: string | null
   selectedChangePaths: string[]
+  rewritePreviewStatus: 'idle' | 'loading' | 'ready' | 'error'
+  rewritePreviewCurrentContent: string | null
+  rewritePreviewError: string | null
   isApplying: boolean
   applyResult: ApplyResult | null
   applyErrorMessage: string | null
@@ -25,6 +28,9 @@ export function ArtifactPanel({
   selectedFilePaths,
   selectedChangePath,
   selectedChangePaths,
+  rewritePreviewStatus,
+  rewritePreviewCurrentContent,
+  rewritePreviewError,
   isApplying,
   applyResult,
   applyErrorMessage,
@@ -126,7 +132,16 @@ export function ArtifactPanel({
         </section>
       ) : null}
 
-      {selectedChange ? <ChangePreview change={selectedChange} /> : selectedFile ? <FilePreview file={selectedFile} /> : null}
+      {selectedChange ? (
+        <ChangePreview
+          change={selectedChange}
+          currentContent={rewritePreviewCurrentContent}
+          rewritePreviewStatus={rewritePreviewStatus}
+          rewritePreviewError={rewritePreviewError}
+        />
+      ) : selectedFile ? (
+        <FilePreview file={selectedFile} />
+      ) : null}
 
       {totalSelectableCount > 0 ? (
         <ApplyPanel
