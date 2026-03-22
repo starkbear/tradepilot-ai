@@ -1,5 +1,7 @@
-﻿from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient
+
 from app.main import app
+from app.services.session_store import SessionStore
 
 
 class CapturingProvider:
@@ -41,8 +43,18 @@ class BrokenProvider:
         raise ValueError('OpenAI returned invalid JSON for generation output')
 
 
-def test_generate_returns_structured_artifacts(monkeypatch) -> None:
+def install_temp_session_store(monkeypatch, tmp_path) -> SessionStore:
+    store = SessionStore(tmp_path / '.local' / 'session.json')
+    monkeypatch.setattr('app.api.routes.auth.session_store', store)
+    monkeypatch.setattr('app.api.routes.chat.session_store', store)
+    monkeypatch.setattr('app.api.routes.files.session_store', store)
+    monkeypatch.setattr('app.api.routes.session.session_store', store)
+    return store
+
+
+def test_generate_returns_structured_artifacts(monkeypatch, tmp_path) -> None:
     provider = CapturingProvider()
+    store = install_temp_session_store(monkeypatch, tmp_path)
     monkeypatch.setattr('app.providers.factory.get_provider', lambda *_: provider)
     monkeypatch.setattr(
         'app.api.routes.chat.build_workspace_context',
@@ -71,6 +83,11 @@ def test_generate_returns_structured_artifacts(monkeypatch) -> None:
     assert data['summary'] == 'MVP scaffold ready.'
     assert data['files'][0]['path'] == 'README.md'
     assert data['changes'][0]['path'] == 'backend/app/main.py'
+    snapshot = store.get_session()
+    assert snapshot.screen == 'workspace'
+    assert snapshot.workspace_path == 'D:/Codex/Trading assistant'
+    assert snapshot.goal == 'Build a stock trading system MVP'
+    assert snapshot.artifact is not None
     assert provider.last_prompt_bundle is not None
     assert 'Workspace Summary:' in provider.last_prompt_bundle.user_prompt
     assert 'React frontend + FastAPI backend.' in provider.last_prompt_bundle.user_prompt

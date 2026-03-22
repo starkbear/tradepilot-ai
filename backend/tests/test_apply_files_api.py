@@ -1,11 +1,22 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.services.session_store import SessionStore
 
 
-def test_apply_selected_files_supports_mixed_files_and_changes(tmp_path: Path) -> None:
+def install_temp_session_store(monkeypatch, tmp_path: Path) -> SessionStore:
+    store = SessionStore(tmp_path / '.local' / 'session.json')
+    monkeypatch.setattr('app.api.routes.auth.session_store', store)
+    monkeypatch.setattr('app.api.routes.chat.session_store', store)
+    monkeypatch.setattr('app.api.routes.files.session_store', store)
+    monkeypatch.setattr('app.api.routes.session.session_store', store)
+    return store
+
+
+def test_apply_selected_files_supports_mixed_files_and_changes(tmp_path: Path, monkeypatch) -> None:
+    store = install_temp_session_store(monkeypatch, tmp_path)
     existing_file = tmp_path / 'backend' / 'app' / 'main.py'
     existing_file.parent.mkdir(parents=True)
     existing_file.write_text('app = FastAPI()\n', encoding='utf-8')
@@ -60,3 +71,7 @@ def test_apply_selected_files_supports_mixed_files_and_changes(tmp_path: Path) -
     assert (tmp_path / 'README.md').read_text(encoding='utf-8') == '# Demo'
     assert existing_file.read_text(encoding='utf-8') == 'app = FastAPI()\napp.include_router(router)\n'
     assert rewrite_file.read_text(encoding='utf-8') == 'export function App() { return null }'
+    snapshot = store.get_session()
+    assert snapshot.apply_result is not None
+    assert snapshot.apply_result.applied_files == ['README.md']
+    assert snapshot.apply_result.applied_changes == ['backend/app/main.py']

@@ -4,6 +4,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 from app.models.schemas import ApplyFilesRequest, ApplyResult, ReadFileRequest, ReadFileResult
+from app.services.session_store import session_store
 from app.services.workspace_fs import apply_changes, apply_files, validate_relative_path
 
 router = APIRouter(prefix='/api/files', tags=['files'])
@@ -60,9 +61,10 @@ def apply_selected_files(payload: ApplyFilesRequest) -> dict:
         issues=change_result.issues + file_result.issues,
         errors=change_result.errors + file_result.errors,
     )
+    session_store.update_after_apply(result)
     return {
         'success': True,
         'message': 'files applied',
-        'data': result.model_dump(),
+        'data': result.model_dump(mode='json'),
         'errors': [],
     }

@@ -5,6 +5,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.chat import router as chat_router
 from app.api.routes.files import router as files_router
 from app.api.routes.providers import router as providers_router
+from app.api.routes.session import router as session_router
 from app.core.config import ProviderConfigurationError
 
 app = FastAPI()
@@ -50,3 +51,4 @@ app.include_router(auth_router)
 app.include_router(chat_router)
 app.include_router(files_router)
 app.include_router(providers_router)
+app.include_router(session_router)

@@ -12,6 +12,6 @@ def login(payload: LoginRequest) -> dict:
     return {
         'success': True,
         'message': 'logged in',
-        'data': session.model_dump(),
+        'data': session.model_dump(mode='json'),
         'errors': [],
     }
