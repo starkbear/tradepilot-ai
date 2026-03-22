@@ -13,3 +13,13 @@ def get_session() -> dict:
         'data': session_store.get_session().model_dump(mode='json'),
         'errors': [],
     }
+
+
+@router.delete('')
+def clear_session() -> dict:
+    return {
+        'success': True,
+        'message': 'session cleared',
+        'data': session_store.clear().model_dump(mode='json'),
+        'errors': [],
+    }

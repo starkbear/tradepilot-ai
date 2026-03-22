@@ -119,6 +119,7 @@ describe('App', () => {
           display_name: 'Wei',
           screen: 'workspace',
           workspace_path: 'D:/Codex/Trading assistant',
+          recent_workspaces: ['D:/Codex/Trading assistant', 'D:/Projects/TradePilot'],
           goal: 'Continue refining the trading assistant',
           artifact: GENERATED_ARTIFACT,
           selected_file_paths: ['README.md'],
@@ -145,6 +146,31 @@ describe('App', () => {
     expect(screen.getByLabelText(/project goal/i)).toHaveValue('Continue refining the trading assistant')
     expect(screen.getByRole('heading', { name: /generated plan/i })).toBeInTheDocument()
     expect(screen.getByText(/applied: 1/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /D:\/Projects\/TradePilot/i })).toBeInTheDocument()
+  })
+
+  it('fills the workspace path from a recent workspace shortcut', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            recent_workspaces: ['D:/Codex/Trading assistant', 'D:/Projects/TradePilot'],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const workspaceInput = await screen.findByLabelText(/workspace path/i)
+    await user.click(screen.getByRole('button', { name: /D:\/Projects\/TradePilot/i }))
+
+    expect(workspaceInput).toHaveValue('D:/Projects/TradePilot')
   })
 
   it('stays on the login screen when no saved session exists', async () => {
@@ -475,5 +501,50 @@ describe('App', () => {
     expect(screen.getByText(/set your openai api key in powershell before generating/i)).toBeInTheDocument()
     expect(screen.getByText('$env:OPENAI_API_KEY=\"your_api_key_here\"')).toBeInTheDocument()
     expect(screen.getByText(/after setting the key, click generate scaffold again/i)).toBeInTheDocument()
+  })
+
+  it('clears the saved session and returns to the login screen', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            recent_workspaces: ['D:/Codex/Trading assistant'],
+            goal: 'Continue refining the trading assistant',
+            artifact: GENERATED_ARTIFACT,
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: true,
+          body: {
+            success: true,
+            message: 'session cleared',
+            data: EMPTY_SESSION,
+            errors: [],
+          },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: /generated plan/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /clear saved session/i }))
+
+    expect(await screen.findByLabelText(/display name/i)).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /generated plan/i })).not.toBeInTheDocument()
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/session',
+      expect.objectContaining({
+        method: 'DELETE',
+      }),
+    )
   })
 })

@@ -65,5 +65,14 @@ class SessionStore:
     def get_session(self) -> PersistedSessionSnapshot:
         return self._session
 
+    def clear(self) -> PersistedSessionSnapshot:
+        self._session = self._default()
+        try:
+            if self._storage_path.exists():
+                self._storage_path.unlink()
+        except OSError:
+            self.save(self._session)
+        return self._session
+
 
 session_store = SessionStore()
