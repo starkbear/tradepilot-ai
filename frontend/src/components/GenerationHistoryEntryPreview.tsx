@@ -7,6 +7,11 @@ type GenerationHistoryEntryPreviewProps = {
 export function GenerationHistoryEntryPreview({ entry }: GenerationHistoryEntryPreviewProps) {
   const warningCount = entry.artifact.warnings.length
   const nextStepCount = entry.artifact.next_steps.length
+  const applySummary = entry.apply_summary
+
+  function formatTimestamp(value: string) {
+    return value.replace('T', ' ').slice(0, 16) + ' UTC'
+  }
 
   return (
     <section className="generation-history-preview" aria-label={`Preview ${entry.goal}`}>
@@ -17,6 +22,20 @@ export function GenerationHistoryEntryPreview({ entry }: GenerationHistoryEntryP
         <li>{`Warnings: ${warningCount}`}</li>
         <li>{`Next Steps: ${nextStepCount}`}</li>
       </ul>
+      {applySummary ? (
+        <div className="generation-history-preview-block">
+          <p className="generation-history-preview-label">Apply Summary</p>
+          <ul className="generation-history-preview-list">
+            <li>{`Validated: ${applySummary.validated_count}`}</li>
+            <li>{`Applied: ${applySummary.applied_count}`}</li>
+            <li>{`Files: ${applySummary.applied_files_count}`}</li>
+            <li>{`Changes: ${applySummary.applied_changes_count}`}</li>
+            <li>{`Issues: ${applySummary.issue_count}`}</li>
+            <li>{`Errors: ${applySummary.error_count}`}</li>
+            <li>{`Last Applied: ${formatTimestamp(applySummary.last_applied_at)}`}</li>
+          </ul>
+        </div>
+      ) : null}
       {warningCount > 0 ? (
         <div className="generation-history-preview-block">
           <p className="generation-history-preview-label">Warnings</p>

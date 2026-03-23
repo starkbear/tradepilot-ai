@@ -34,6 +34,23 @@ export function GenerationHistoryPanel({
     return createdAt.replace('T', ' ').slice(0, 16) + ' UTC'
   }
 
+  function buildApplySummary(entry: GenerationHistoryEntry) {
+    const applySummary = entry.apply_summary
+
+    if (!applySummary) {
+      return null
+    }
+
+    const issueLabel =
+      applySummary.issue_count === 1 ? '1 issues' : `${applySummary.issue_count} issues`
+
+    return [
+      `Applied ${applySummary.applied_count} items`,
+      `${applySummary.applied_files_count} files • ${applySummary.applied_changes_count} changes`,
+      issueLabel,
+    ]
+  }
+
   return (
     <section className="generation-history" aria-label="Recent generations">
       <div className="generation-history-header">
@@ -58,6 +75,11 @@ export function GenerationHistoryPanel({
               <p className="generation-history-meta">
                 {`${entry.artifact.files.length} files • ${entry.artifact.changes.length} changes`}
               </p>
+              {buildApplySummary(entry)?.map((line) => (
+                <p key={`${entry.id}-${line}`} className="generation-history-meta">
+                  {line}
+                </p>
+              ))}
             </div>
             <div className="generation-history-actions">
               <button

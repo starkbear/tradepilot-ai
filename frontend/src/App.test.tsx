@@ -524,6 +524,62 @@ describe('App', () => {
     const secondPreview = within(historyPanel).getByRole('region', { name: /preview second history entry/i })
     expect(secondPreview).toBeInTheDocument()
     expect(within(secondPreview).getByText(/second summary/i)).toBeInTheDocument()
+    expect(within(secondPreview).queryByText(/apply summary/i)).not.toBeInTheDocument()
+  })
+
+  it('shows apply summary metadata for a generation history entry when available', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-apply',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'Applied history entry',
+                summary: 'Applied summary',
+                artifact: GENERATED_ARTIFACT,
+                apply_summary: {
+                  validated_count: 4,
+                  applied_count: 3,
+                  applied_files_count: 2,
+                  applied_changes_count: 1,
+                  issue_count: 1,
+                  error_count: 0,
+                  last_applied_at: '2026-03-23T09:10:00Z',
+                },
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    expect(within(historyPanel).getByText(/applied 3 items/i)).toBeInTheDocument()
+    expect(within(historyPanel).getByText(/2 files • 1 changes/i)).toBeInTheDocument()
+    expect(within(historyPanel).getByText(/1 issues/i)).toBeInTheDocument()
+
+    await user.click(within(historyPanel).getByRole('button', { name: /preview applied history entry/i }))
+
+    const preview = within(historyPanel).getByRole('region', { name: /preview applied history entry/i })
+    expect(within(preview).getByText(/apply summary/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/validated: 4/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/applied: 3/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/files: 2/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/changes: 1/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/issues: 1/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/errors: 0/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/last applied: 2026-03-23 09:10 utc/i)).toBeInTheDocument()
   })
 
   it('moves the active badge after restoring a different generation', async () => {
