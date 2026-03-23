@@ -22,6 +22,7 @@ class PersistedSessionSnapshot(BaseModel):
     workspace_path: str = ''
     goal: str = ''
     artifact: 'GenerationArtifact | None' = None
+    generation_history: list['GenerationHistoryEntry'] = Field(default_factory=list)
     selected_file_paths: list[str] = Field(default_factory=list)
     selected_change_paths: list[str] = Field(default_factory=list)
     selected_file_path: str | None = None
@@ -77,6 +78,14 @@ class GenerationArtifact(BaseModel):
     next_steps: list[str] = Field(default_factory=list)
 
 
+class GenerationHistoryEntry(BaseModel):
+    id: str
+    created_at: str
+    goal: str
+    summary: str
+    artifact: GenerationArtifact
+
+
 class ApplyFilesRequest(BaseModel):
     workspace_path: str
     files: list[FileDraft] = Field(default_factory=list)
@@ -86,6 +95,10 @@ class ApplyFilesRequest(BaseModel):
 class ReadFileRequest(BaseModel):
     workspace_path: str
     path: str
+
+
+class RestoreGenerationRequest(BaseModel):
+    generation_id: str
 
 
 class ReadFileResult(BaseModel):

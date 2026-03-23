@@ -83,6 +83,25 @@ export async function clearSession(): Promise<PersistedSessionSnapshot> {
   return payload.data
 }
 
+export async function restoreGeneration(generationId: string): Promise<PersistedSessionSnapshot> {
+  const response = await fetch('/api/session/restore-generation', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      generation_id: generationId,
+    }),
+  })
+  const payload = (await response.json()) as ApiEnvelope<PersistedSessionSnapshot | null>
+
+  if (!response.ok || !payload.success || !payload.data) {
+    throw new Error(payload.message || 'Restoring generation failed')
+  }
+
+  return payload.data
+}
+
 export async function loginLocalSession(request: LoginRequest): Promise<PersistedSessionSnapshot> {
   const response = await fetch('/api/auth/login', {
     method: 'POST',

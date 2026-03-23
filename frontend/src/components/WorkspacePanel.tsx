@@ -1,31 +1,39 @@
+import type { GenerationHistoryEntry } from '../lib/types'
+import { GenerationHistoryPanel } from './GenerationHistoryPanel'
 import { ProviderSetupNotice } from './ProviderSetupNotice'
 
 type WorkspacePanelProps = {
   workspacePath: string
   goal: string
   recentWorkspaces: string[]
+  generationHistory: GenerationHistoryEntry[]
   errorMessage: string | null
   isGenerating: boolean
   isClearingSession?: boolean
+  isRestoringGeneration?: boolean
   onWorkspacePathChange: (value: string) => void
   onGoalChange: (value: string) => void
   onGenerate: () => void
   onSelectRecentWorkspace: (value: string) => void
   onClearSession: () => void
+  onRestoreGeneration: (generationId: string) => void
 }
 
 export function WorkspacePanel({
   workspacePath,
   goal,
   recentWorkspaces,
+  generationHistory,
   errorMessage,
   isGenerating,
   isClearingSession = false,
+  isRestoringGeneration = false,
   onWorkspacePathChange,
   onGoalChange,
   onGenerate,
   onSelectRecentWorkspace,
   onClearSession,
+  onRestoreGeneration,
 }: WorkspacePanelProps) {
   const canGenerate = Boolean(workspacePath.trim() && goal.trim()) && !isGenerating
   const needsOpenAiSetup = errorMessage?.includes('OPENAI_API_KEY') ?? false
@@ -58,6 +66,11 @@ export function WorkspacePanel({
           </div>
         </section>
       ) : null}
+      <GenerationHistoryPanel
+        entries={generationHistory}
+        isRestoring={isRestoringGeneration}
+        onRestore={onRestoreGeneration}
+      />
       <label className="field">
         <span>Project Goal</span>
         <textarea value={goal} onChange={(event) => onGoalChange(event.target.value)} />

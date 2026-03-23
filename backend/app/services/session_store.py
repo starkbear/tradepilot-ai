@@ -1,7 +1,11 @@
 import json
+from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
-from app.models.schemas import ApplyResult, GenerationArtifact, PersistedSessionSnapshot
+from app.models.schemas import ApplyResult, GenerationArtifact, GenerationHistoryEntry, PersistedSessionSnapshot
+
+MAX_GENERATION_HISTORY = 5
 
 
 class SessionStore:
@@ -42,12 +46,20 @@ class SessionStore:
 
     def update_after_generate(self, workspace_path: str, goal: str, artifact: GenerationArtifact) -> PersistedSessionSnapshot:
         recent_workspaces = [workspace_path, *[item for item in self._session.recent_workspaces if item != workspace_path]]
+        history_entry = GenerationHistoryEntry(
+            id=uuid4().hex,
+            created_at=datetime.now(timezone.utc).isoformat(),
+            goal=goal,
+            summary=artifact.summary,
+            artifact=artifact,
+        )
         session = self._session.model_copy(
             update={
                 'screen': 'workspace',
                 'workspace_path': workspace_path,
                 'goal': goal,
                 'artifact': artifact,
+                'generation_history': [history_entry, *self._session.generation_history][:MAX_GENERATION_HISTORY],
                 'selected_file_paths': [file.path for file in artifact.files],
                 'selected_change_paths': [change.path for change in artifact.changes],
                 'selected_file_path': artifact.files[0].path if artifact.files else None,
@@ -60,6 +72,26 @@ class SessionStore:
 
     def update_after_apply(self, apply_result: ApplyResult) -> PersistedSessionSnapshot:
         session = self._session.model_copy(update={'apply_result': apply_result})
+        return self.save(session)
+
+    def restore_generation(self, generation_id: str) -> PersistedSessionSnapshot:
+        entry = next((item for item in self._session.generation_history if item.id == generation_id), None)
+        if entry is None:
+            raise KeyError('generation history entry not found')
+
+        artifact = entry.artifact
+        session = self._session.model_copy(
+            update={
+                'screen': 'workspace',
+                'goal': entry.goal,
+                'artifact': artifact,
+                'selected_file_paths': [file.path for file in artifact.files],
+                'selected_change_paths': [change.path for change in artifact.changes],
+                'selected_file_path': artifact.files[0].path if artifact.files else None,
+                'selected_change_path': None,
+                'apply_result': None,
+            }
+        )
         return self.save(session)
 
     def get_session(self) -> PersistedSessionSnapshot:
