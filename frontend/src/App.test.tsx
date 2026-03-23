@@ -373,6 +373,124 @@ describe('App', () => {
     expect(within(historyPanel).getByRole('button', { name: /clear history/i })).toBeInTheDocument()
   })
 
+  it('shows saved time and file-change counts for each generation history entry', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-1',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'First history entry',
+                summary: 'First summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    expect(within(historyPanel).getByText(/saved 2026-03-23 09:00 utc/i)).toBeInTheDocument()
+    expect(within(historyPanel).getByText(/2 files/i)).toBeInTheDocument()
+    expect(within(historyPanel).getByText(/2 changes/i)).toBeInTheDocument()
+  })
+
+  it('expands a generation history preview when requested', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-1',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'First history entry',
+                summary: 'First summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /preview first history entry/i }))
+
+    const preview = within(historyPanel).getByRole('region', { name: /preview first history entry/i })
+    expect(preview).toHaveTextContent(/frontend \+ backend split/i)
+    expect(preview).toHaveTextContent(/project tree items: 2/i)
+    expect(preview).toHaveTextContent(/placeholder provider response in use/i)
+    expect(preview).toHaveTextContent(/review generated files/i)
+  })
+
+  it('keeps only one generation history preview open at a time', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-1',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'First history entry',
+                summary: 'First summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+              {
+                id: 'gen-2',
+                created_at: '2026-03-23T09:05:00Z',
+                goal: 'Second history entry',
+                summary: 'Second summary',
+                artifact: RESTORED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /preview first history entry/i }))
+    expect(within(historyPanel).getByRole('region', { name: /preview first history entry/i })).toBeInTheDocument()
+
+    await user.click(within(historyPanel).getByRole('button', { name: /preview second history entry/i }))
+
+    expect(within(historyPanel).queryByRole('region', { name: /preview first history entry/i })).not.toBeInTheDocument()
+    const secondPreview = within(historyPanel).getByRole('region', { name: /preview second history entry/i })
+    expect(secondPreview).toBeInTheDocument()
+    expect(within(secondPreview).getByText(/second summary/i)).toBeInTheDocument()
+  })
+
   it('removes a single generation history entry from the panel', async () => {
     const user = userEvent.setup()
     const fetchMock = vi

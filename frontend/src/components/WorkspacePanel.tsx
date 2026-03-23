@@ -7,6 +7,7 @@ type WorkspacePanelProps = {
   goal: string
   recentWorkspaces: string[]
   generationHistory: GenerationHistoryEntry[]
+  expandedGenerationId: string | null
   errorMessage: string | null
   isGenerating: boolean
   isClearingSession?: boolean
@@ -20,6 +21,7 @@ type WorkspacePanelProps = {
   onRestoreGeneration: (generationId: string) => void
   onDeleteGeneration: (generationId: string) => void
   onClearGenerationHistory: () => void
+  onToggleGenerationPreview: (generationId: string) => void
 }
 
 export function WorkspacePanel({
@@ -27,6 +29,7 @@ export function WorkspacePanel({
   goal,
   recentWorkspaces,
   generationHistory,
+  expandedGenerationId,
   errorMessage,
   isGenerating,
   isClearingSession = false,
@@ -40,6 +43,7 @@ export function WorkspacePanel({
   onRestoreGeneration,
   onDeleteGeneration,
   onClearGenerationHistory,
+  onToggleGenerationPreview,
 }: WorkspacePanelProps) {
   const canGenerate = Boolean(workspacePath.trim() && goal.trim()) && !isGenerating
   const needsOpenAiSetup = errorMessage?.includes('OPENAI_API_KEY') ?? false
@@ -76,9 +80,11 @@ export function WorkspacePanel({
         entries={generationHistory}
         isRestoring={isRestoringGeneration}
         isManagingHistory={isManagingGenerationHistory}
+        expandedGenerationId={expandedGenerationId}
         onRestore={onRestoreGeneration}
         onRemove={onDeleteGeneration}
         onClear={onClearGenerationHistory}
+        onTogglePreview={onToggleGenerationPreview}
       />
       <label className="field">
         <span>Project Goal</span>

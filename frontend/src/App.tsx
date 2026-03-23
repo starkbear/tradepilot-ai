@@ -30,6 +30,7 @@ export default function App() {
   const [goal, setGoal] = useState('')
   const [recentWorkspaces, setRecentWorkspaces] = useState<string[]>([])
   const [generationHistory, setGenerationHistory] = useState<GenerationHistoryEntry[]>([])
+  const [expandedGenerationId, setExpandedGenerationId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [artifact, setArtifact] = useState<GenerationArtifact | null>(null)
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null)
@@ -64,6 +65,7 @@ export default function App() {
     setApplyResult(snapshot.apply_result)
     setApplyErrorMessage(null)
     setErrorMessage(null)
+    setExpandedGenerationId(null)
     resetPreviewState()
 
     if (snapshot.artifact) {
@@ -203,6 +205,10 @@ export default function App() {
     }
   }
 
+  function handleToggleGenerationPreview(generationId: string) {
+    setExpandedGenerationId((current) => (current === generationId ? null : generationId))
+  }
+
   async function handleRestoreGeneration(generationId: string) {
     setIsRestoringGeneration(true)
     setErrorMessage(null)
@@ -312,6 +318,7 @@ export default function App() {
             goal={goal}
             recentWorkspaces={recentWorkspaces}
             generationHistory={generationHistory}
+            expandedGenerationId={expandedGenerationId}
             errorMessage={errorMessage}
             isGenerating={isGenerating}
             isClearingSession={isClearingSession}
@@ -325,6 +332,7 @@ export default function App() {
             onRestoreGeneration={handleRestoreGeneration}
             onDeleteGeneration={handleDeleteGeneration}
             onClearGenerationHistory={handleClearGenerationHistory}
+            onToggleGenerationPreview={handleToggleGenerationPreview}
           />
           {artifact ? (
             <ArtifactPanel
