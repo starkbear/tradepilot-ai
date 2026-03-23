@@ -137,6 +137,24 @@ button:disabled {
   list-style: none;
 }
 
+.generation-history-groups {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.generation-history-group {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.generation-history-group-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: rgba(21, 36, 51, 0.66);
+}
 .generation-history-item {
   display: grid;
   gap: 0.7rem;
@@ -424,3 +442,4 @@ button:disabled {
     max-width: none;
   }
 }
+
