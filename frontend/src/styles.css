@@ -151,10 +151,55 @@ button:disabled {
   gap: 0.3rem;
 }
 
+.generation-history-meta {
+  margin: 0;
+  color: rgba(21, 36, 51, 0.7);
+  font-size: 0.92rem;
+}
+
 .generation-history-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
+}
+
+.generation-history-preview {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.9rem 1rem;
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.generation-history-preview-architecture,
+.generation-history-preview-summary,
+.generation-history-preview-label {
+  margin: 0;
+}
+
+.generation-history-preview-architecture {
+  font-weight: 600;
+}
+
+.generation-history-preview-summary {
+  color: rgba(21, 36, 51, 0.82);
+}
+
+.generation-history-preview-label {
+  font-size: 0.92rem;
+  color: rgba(21, 36, 51, 0.72);
+}
+
+.generation-history-preview-list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.generation-history-preview-block {
+  display: grid;
+  gap: 0.35rem;
 }
 
 .generation-history-goal,

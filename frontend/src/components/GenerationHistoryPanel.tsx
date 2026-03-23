@@ -1,27 +1,36 @@
 import type { GenerationHistoryEntry } from '../lib/types'
+import { GenerationHistoryEntryPreview } from './GenerationHistoryEntryPreview'
 
 type GenerationHistoryPanelProps = {
   entries: GenerationHistoryEntry[]
   isRestoring: boolean
   isManagingHistory: boolean
+  expandedGenerationId: string | null
   onRestore: (generationId: string) => void
   onRemove: (generationId: string) => void
   onClear: () => void
+  onTogglePreview: (generationId: string) => void
 }
 
 export function GenerationHistoryPanel({
   entries,
   isRestoring,
   isManagingHistory,
+  expandedGenerationId,
   onRestore,
   onRemove,
   onClear,
+  onTogglePreview,
 }: GenerationHistoryPanelProps) {
   if (entries.length === 0) {
     return null
   }
 
   const isBusy = isRestoring || isManagingHistory
+
+  function formatSavedAt(createdAt: string) {
+    return createdAt.replace('T', ' ').slice(0, 16) + ' UTC'
+  }
 
   return (
     <section className="generation-history" aria-label="Recent generations">
@@ -36,9 +45,22 @@ export function GenerationHistoryPanel({
           <li key={entry.id} className="generation-history-item">
             <div className="generation-history-copy">
               <p className="generation-history-goal">{entry.goal}</p>
+              <p className="generation-history-meta">{`Saved ${formatSavedAt(entry.created_at)}`}</p>
               <p className="generation-history-summary">{entry.summary}</p>
+              <p className="generation-history-meta">
+                {`${entry.artifact.files.length} files • ${entry.artifact.changes.length} changes`}
+              </p>
             </div>
             <div className="generation-history-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                aria-label={`${expandedGenerationId === entry.id ? 'Hide Preview' : 'Preview'} ${entry.goal}`}
+                disabled={isBusy}
+                onClick={() => onTogglePreview(entry.id)}
+              >
+                {expandedGenerationId === entry.id ? 'Hide Preview' : 'Preview'}
+              </button>
               <button
                 type="button"
                 className="secondary-button"
@@ -58,6 +80,7 @@ export function GenerationHistoryPanel({
                 {isManagingHistory ? 'Removing...' : 'Remove'}
               </button>
             </div>
+            {expandedGenerationId === entry.id ? <GenerationHistoryEntryPreview entry={entry} /> : null}
           </li>
         ))}
       </ul>
