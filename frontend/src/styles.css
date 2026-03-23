@@ -122,6 +122,13 @@ button:disabled {
   margin-top: -0.25rem;
 }
 
+.generation-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .generation-history-list {
   display: grid;
   gap: 0.7rem;
@@ -142,6 +149,12 @@ button:disabled {
 .generation-history-copy {
   display: grid;
   gap: 0.3rem;
+}
+
+.generation-history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
 }
 
 .generation-history-goal,

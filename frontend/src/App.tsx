@@ -6,7 +6,9 @@ import { WorkspacePanel } from './components/WorkspacePanel'
 import { DEFAULT_MODEL, DEFAULT_PROVIDER_ID } from './lib/defaults'
 import {
   applyFiles,
+  clearGenerationHistory,
   clearSession,
+  deleteGeneration,
   generateArtifact,
   loadSession,
   loginLocalSession,
@@ -38,6 +40,7 @@ export default function App() {
   const [isApplying, setIsApplying] = useState(false)
   const [isClearingSession, setIsClearingSession] = useState(false)
   const [isRestoringGeneration, setIsRestoringGeneration] = useState(false)
+  const [isManagingGenerationHistory, setIsManagingGenerationHistory] = useState(false)
   const [applyResult, setApplyResult] = useState<ApplyResult | null>(null)
   const [applyErrorMessage, setApplyErrorMessage] = useState<string | null>(null)
   const [rewritePreviewStatus, setRewritePreviewStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
@@ -214,6 +217,34 @@ export default function App() {
     }
   }
 
+  async function handleDeleteGeneration(generationId: string) {
+    setIsManagingGenerationHistory(true)
+    setErrorMessage(null)
+
+    try {
+      const snapshot = await deleteGeneration(generationId)
+      applyRestoredSession(snapshot)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Deleting generation failed')
+    } finally {
+      setIsManagingGenerationHistory(false)
+    }
+  }
+
+  async function handleClearGenerationHistory() {
+    setIsManagingGenerationHistory(true)
+    setErrorMessage(null)
+
+    try {
+      const snapshot = await clearGenerationHistory()
+      applyRestoredSession(snapshot)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Clearing generation history failed')
+    } finally {
+      setIsManagingGenerationHistory(false)
+    }
+  }
+
   function handleToggleFile(path: string) {
     setSelectedFilePaths((current) =>
       current.includes(path) ? current.filter((entry) => entry !== path) : [...current, path],
@@ -285,12 +316,15 @@ export default function App() {
             isGenerating={isGenerating}
             isClearingSession={isClearingSession}
             isRestoringGeneration={isRestoringGeneration}
+            isManagingGenerationHistory={isManagingGenerationHistory}
             onWorkspacePathChange={setWorkspacePath}
             onGoalChange={setGoal}
             onGenerate={handleGenerate}
             onSelectRecentWorkspace={setWorkspacePath}
             onClearSession={handleClearSession}
             onRestoreGeneration={handleRestoreGeneration}
+            onDeleteGeneration={handleDeleteGeneration}
+            onClearGenerationHistory={handleClearGenerationHistory}
           />
           {artifact ? (
             <ArtifactPanel

@@ -102,6 +102,32 @@ export async function restoreGeneration(generationId: string): Promise<Persisted
   return payload.data
 }
 
+export async function deleteGeneration(generationId: string): Promise<PersistedSessionSnapshot> {
+  const response = await fetch(`/api/session/generations/${generationId}`, {
+    method: 'DELETE',
+  })
+  const payload = (await response.json()) as ApiEnvelope<PersistedSessionSnapshot | null>
+
+  if (!response.ok || !payload.success || !payload.data) {
+    throw new Error(payload.message || 'Deleting generation failed')
+  }
+
+  return payload.data
+}
+
+export async function clearGenerationHistory(): Promise<PersistedSessionSnapshot> {
+  const response = await fetch('/api/session/generations', {
+    method: 'DELETE',
+  })
+  const payload = (await response.json()) as ApiEnvelope<PersistedSessionSnapshot | null>
+
+  if (!response.ok || !payload.success || !payload.data) {
+    throw new Error(payload.message || 'Clearing generation history failed')
+  }
+
+  return payload.data
+}
+
 export async function loginLocalSession(request: LoginRequest): Promise<PersistedSessionSnapshot> {
   const response = await fetch('/api/auth/login', {
     method: 'POST',

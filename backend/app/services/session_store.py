@@ -94,6 +94,23 @@ class SessionStore:
         )
         return self.save(session)
 
+    def delete_generation(self, generation_id: str) -> PersistedSessionSnapshot:
+        if not any(item.id == generation_id for item in self._session.generation_history):
+            raise KeyError('generation history entry not found')
+
+        session = self._session.model_copy(
+            update={
+                'generation_history': [
+                    item for item in self._session.generation_history if item.id != generation_id
+                ]
+            }
+        )
+        return self.save(session)
+
+    def clear_generation_history(self) -> PersistedSessionSnapshot:
+        session = self._session.model_copy(update={'generation_history': []})
+        return self.save(session)
+
     def get_session(self) -> PersistedSessionSnapshot:
         return self._session
 

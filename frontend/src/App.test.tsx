@@ -341,6 +341,224 @@ describe('App', () => {
     expect(screen.getByText(/mvp scaffold ready/i)).toBeInTheDocument()
   })
 
+  it('renders remove and clear controls for generation history entries', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-1',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'First history entry',
+                summary: 'First summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    expect(within(historyPanel).getByRole('button', { name: /remove first history entry/i })).toBeInTheDocument()
+    expect(within(historyPanel).getByRole('button', { name: /clear history/i })).toBeInTheDocument()
+  })
+
+  it('removes a single generation history entry from the panel', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-1',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'First history entry',
+                summary: 'First summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+              {
+                id: 'gen-2',
+                created_at: '2026-03-23T09:05:00Z',
+                goal: 'Second history entry',
+                summary: 'Second summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: true,
+          body: {
+            success: true,
+            message: 'generation deleted',
+            data: buildSessionSnapshot({
+              display_name: 'Wei',
+              screen: 'workspace',
+              workspace_path: 'D:/Codex/Trading assistant',
+              goal: 'Current goal',
+              artifact: GENERATED_ARTIFACT,
+              generation_history: [
+                {
+                  id: 'gen-2',
+                  created_at: '2026-03-23T09:05:00Z',
+                  goal: 'Second history entry',
+                  summary: 'Second summary',
+                  artifact: GENERATED_ARTIFACT,
+                },
+              ],
+            }),
+            errors: [],
+          },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /remove first history entry/i }))
+
+    await waitFor(() => {
+      expect(screen.queryByText(/first history entry/i)).not.toBeInTheDocument()
+    })
+    expect(screen.getByText(/second history entry/i)).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/session/generations/gen-1',
+      expect.objectContaining({
+        method: 'DELETE',
+      }),
+    )
+  })
+
+  it('clears generation history and hides the history panel', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-1',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'Only history entry',
+                summary: 'Only summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: true,
+          body: {
+            success: true,
+            message: 'generation history cleared',
+            data: buildSessionSnapshot({
+              display_name: 'Wei',
+              screen: 'workspace',
+              workspace_path: 'D:/Codex/Trading assistant',
+              goal: 'Current goal',
+              artifact: GENERATED_ARTIFACT,
+              generation_history: [],
+            }),
+            errors: [],
+          },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /clear history/i }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('region', { name: /recent generations/i })).not.toBeInTheDocument()
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/session/generations',
+      expect.objectContaining({
+        method: 'DELETE',
+      }),
+    )
+  })
+
+  it('keeps the history panel visible when deleting a generation fails', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-fail',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'Failing history entry',
+                summary: 'Failing summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: false,
+          status: 404,
+          body: {
+            success: false,
+            message: 'generation history entry not found',
+            data: null,
+            errors: ['generation history entry not found'],
+          },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /remove failing history entry/i }))
+
+    expect(await screen.findByText(/generation history entry not found/i)).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: /recent generations/i })).toBeInTheDocument()
+    expect(screen.getByText(/failing history entry/i)).toBeInTheDocument()
+  })
+
   it('fills the workspace path from a recent workspace shortcut', async () => {
     const user = userEvent.setup()
     vi.stubGlobal(

@@ -148,3 +148,44 @@ def test_restore_generation_raises_when_entry_missing(tmp_path: Path) -> None:
         assert str(error) == "'generation history entry not found'"
     else:
         raise AssertionError('restore_generation should raise for missing history entry')
+
+
+def test_delete_generation_removes_only_the_selected_history_entry(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path / '.local' / 'session.json')
+    first = store.update_after_generate(
+        workspace_path='D:/Codex/Trading assistant',
+        goal='First generation',
+        artifact=build_artifact('Summary 1', 'frontend/src/App.tsx'),
+    )
+    first_entry_id = first.generation_history[0].id
+    store.update_after_generate(
+        workspace_path='D:/Codex/Trading assistant',
+        goal='Second generation',
+        artifact=build_artifact('Summary 2', 'backend/app/main.py'),
+    )
+
+    updated = store.delete_generation(first_entry_id)
+
+    assert [entry.goal for entry in updated.generation_history] == ['Second generation']
+    assert updated.artifact is not None
+    assert updated.artifact.summary == 'Summary 2'
+
+
+def test_clear_generation_history_keeps_the_active_artifact(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path / '.local' / 'session.json')
+    store.update_after_generate(
+        workspace_path='D:/Codex/Trading assistant',
+        goal='First generation',
+        artifact=build_artifact('Summary 1', 'frontend/src/App.tsx'),
+    )
+    store.update_after_generate(
+        workspace_path='D:/Codex/Trading assistant',
+        goal='Second generation',
+        artifact=build_artifact('Summary 2', 'backend/app/main.py'),
+    )
+
+    updated = store.clear_generation_history()
+
+    assert updated.generation_history == []
+    assert updated.artifact is not None
+    assert updated.artifact.summary == 'Summary 2'
