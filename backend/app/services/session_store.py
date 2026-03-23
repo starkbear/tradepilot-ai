@@ -3,7 +3,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from app.models.schemas import ApplyResult, GenerationArtifact, GenerationHistoryEntry, PersistedSessionSnapshot
+from app.models.schemas import (
+    ApplyResult,
+    GenerationApplySummary,
+    GenerationArtifact,
+    GenerationHistoryEntry,
+    PersistedSessionSnapshot,
+)
 
 MAX_GENERATION_HISTORY = 5
 
@@ -72,7 +78,30 @@ class SessionStore:
         return self.save(session)
 
     def update_after_apply(self, apply_result: ApplyResult) -> PersistedSessionSnapshot:
-        session = self._session.model_copy(update={'apply_result': apply_result})
+        active_generation_id = self._session.active_generation_id
+        apply_summary = GenerationApplySummary(
+            validated_count=len(apply_result.validated),
+            applied_count=len(apply_result.applied),
+            applied_files_count=len(apply_result.applied_files),
+            applied_changes_count=len(apply_result.applied_changes),
+            issue_count=len(apply_result.issues),
+            error_count=len(apply_result.errors),
+            last_applied_at=datetime.now(timezone.utc).isoformat(),
+        )
+        generation_history = [
+            (
+                entry.model_copy(update={'apply_summary': apply_summary})
+                if active_generation_id and entry.id == active_generation_id
+                else entry
+            )
+            for entry in self._session.generation_history
+        ]
+        session = self._session.model_copy(
+            update={
+                'apply_result': apply_result,
+                'generation_history': generation_history,
+            }
+        )
         return self.save(session)
 
     def restore_generation(self, generation_id: str) -> PersistedSessionSnapshot:

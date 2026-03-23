@@ -207,3 +207,98 @@ def test_clear_generation_history_keeps_the_active_artifact(tmp_path: Path) -> N
     assert updated.artifact is not None
     assert updated.artifact.summary == 'Summary 2'
     assert updated.active_generation_id is None
+
+
+def test_update_after_apply_records_summary_on_active_generation(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path / '.local' / 'session.json')
+    generated = store.update_after_generate(
+        workspace_path='D:/Codex/Trading assistant',
+        goal='Dashboard scaffold',
+        artifact=build_artifact('Summary 1', 'frontend/src/Dashboard.tsx'),
+    )
+    active_entry_id = generated.generation_history[0].id
+
+    updated = store.update_after_apply(
+        ApplyResult(
+            validated=['frontend/src/Dashboard.tsx', 'backend/app/api/routes/dashboard.py'],
+            applied=['frontend/src/Dashboard.tsx'],
+            applied_files=['frontend/src/Dashboard.tsx'],
+            applied_changes=[],
+            skipped=['backend/app/api/routes/dashboard.py'],
+            issues=[],
+            errors=[],
+        )
+    )
+
+    history_entry = next(entry for entry in updated.generation_history if entry.id == active_entry_id)
+
+    assert history_entry.apply_summary is not None
+    assert history_entry.apply_summary.validated_count == 2
+    assert history_entry.apply_summary.applied_count == 1
+    assert history_entry.apply_summary.applied_files_count == 1
+    assert history_entry.apply_summary.applied_changes_count == 0
+    assert history_entry.apply_summary.issue_count == 0
+    assert history_entry.apply_summary.error_count == 0
+    assert history_entry.apply_summary.last_applied_at.endswith('+00:00')
+
+
+def test_update_after_apply_leaves_non_active_history_entries_unchanged(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path / '.local' / 'session.json')
+    first = store.update_after_generate(
+        workspace_path='D:/Codex/Trading assistant',
+        goal='First generation',
+        artifact=build_artifact('Summary 1', 'frontend/src/App.tsx'),
+    )
+    first_entry_id = first.generation_history[0].id
+    store.update_after_generate(
+        workspace_path='D:/Codex/Trading assistant',
+        goal='Second generation',
+        artifact=build_artifact('Summary 2', 'backend/app/main.py'),
+    )
+
+    updated = store.update_after_apply(
+        ApplyResult(
+            validated=['backend/app/main.py'],
+            applied=['backend/app/main.py'],
+            applied_files=['backend/app/main.py'],
+            applied_changes=[],
+            skipped=[],
+            issues=[],
+            errors=[],
+        )
+    )
+
+    first_entry = next(entry for entry in updated.generation_history if entry.id == first_entry_id)
+    active_entry = next(entry for entry in updated.generation_history if entry.id != first_entry_id)
+
+    assert first_entry.apply_summary is None
+    assert active_entry.apply_summary is not None
+    assert active_entry.apply_summary.applied_files_count == 1
+
+
+def test_update_after_apply_keeps_history_unchanged_when_no_active_generation_exists(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path / '.local' / 'session.json')
+    generated = store.update_after_generate(
+        workspace_path='D:/Codex/Trading assistant',
+        goal='Only generation',
+        artifact=build_artifact('Summary 1', 'frontend/src/App.tsx'),
+    )
+    entry_id = generated.generation_history[0].id
+    store.save(store.get_session().model_copy(update={'active_generation_id': None}))
+
+    updated = store.update_after_apply(
+        ApplyResult(
+            validated=['frontend/src/App.tsx'],
+            applied=['frontend/src/App.tsx'],
+            applied_files=['frontend/src/App.tsx'],
+            applied_changes=[],
+            skipped=[],
+            issues=[],
+            errors=[],
+        )
+    )
+
+    history_entry = next(entry for entry in updated.generation_history if entry.id == entry_id)
+
+    assert updated.apply_result is not None
+    assert history_entry.apply_summary is None

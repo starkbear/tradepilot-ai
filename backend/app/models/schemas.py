@@ -79,12 +79,23 @@ class GenerationArtifact(BaseModel):
     next_steps: list[str] = Field(default_factory=list)
 
 
+class GenerationApplySummary(BaseModel):
+    validated_count: int
+    applied_count: int
+    applied_files_count: int
+    applied_changes_count: int
+    issue_count: int
+    error_count: int
+    last_applied_at: str
+
+
 class GenerationHistoryEntry(BaseModel):
     id: str
     created_at: str
     goal: str
     summary: str
     artifact: GenerationArtifact
+    apply_summary: GenerationApplySummary | None = None
 
 
 class ApplyFilesRequest(BaseModel):
