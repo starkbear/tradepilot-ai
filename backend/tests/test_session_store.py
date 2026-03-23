@@ -1,7 +1,25 @@
 from pathlib import Path
 
-from app.models.schemas import PersistedSessionSnapshot
+from app.models.schemas import ApplyResult, FileDraft, GenerationArtifact, PersistedSessionSnapshot
 from app.services.session_store import SessionStore
+
+
+def build_artifact(summary: str, file_path: str = 'README.md') -> GenerationArtifact:
+    return GenerationArtifact(
+        assistant_message='Here is your scaffold.',
+        summary=summary,
+        architecture='Frontend + backend split.',
+        project_tree=['frontend/', 'backend/'],
+        files=[
+            FileDraft(
+                path=file_path,
+                purpose='project overview',
+                content=f'# {summary}',
+            )
+        ],
+        warnings=[],
+        next_steps=['Review generated files'],
+    )
 
 
 def test_session_store_returns_default_snapshot_when_file_missing(tmp_path: Path) -> None:
@@ -54,3 +72,79 @@ def test_session_store_clear_resets_snapshot_and_removes_file(tmp_path: Path) ->
     assert cleared.screen == 'login'
     assert cleared.workspace_path == ''
     assert not session_file.exists()
+
+
+def test_update_after_generate_records_generation_history_and_defaults(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path / '.local' / 'session.json')
+
+    snapshot = store.update_after_generate(
+        workspace_path='D:/Codex/Trading assistant',
+        goal='Build the first scaffold',
+        artifact=build_artifact('First scaffold ready.', 'frontend/src/App.tsx'),
+    )
+
+    assert snapshot.artifact is not None
+    assert snapshot.selected_file_paths == ['frontend/src/App.tsx']
+    assert snapshot.selected_file_path == 'frontend/src/App.tsx'
+    assert len(snapshot.generation_history) == 1
+    assert snapshot.generation_history[0].goal == 'Build the first scaffold'
+    assert snapshot.generation_history[0].summary == 'First scaffold ready.'
+    assert snapshot.generation_history[0].artifact.summary == 'First scaffold ready.'
+
+
+def test_update_after_generate_caps_generation_history_at_five_entries(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path / '.local' / 'session.json')
+
+    for index in range(6):
+        store.update_after_generate(
+            workspace_path='D:/Codex/Trading assistant',
+            goal=f'Generation {index}',
+            artifact=build_artifact(f'Summary {index}', f'file-{index}.md'),
+        )
+
+    snapshot = store.get_session()
+
+    assert len(snapshot.generation_history) == 5
+    assert [entry.goal for entry in snapshot.generation_history] == [
+        'Generation 5',
+        'Generation 4',
+        'Generation 3',
+        'Generation 2',
+        'Generation 1',
+    ]
+
+
+def test_restore_generation_resets_active_state_from_history(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path / '.local' / 'session.json')
+    first = store.update_after_generate(
+        workspace_path='D:/Codex/Trading assistant',
+        goal='First generation',
+        artifact=build_artifact('Summary 1', 'frontend/src/App.tsx'),
+    )
+    first_entry_id = first.generation_history[0].id
+    store.update_after_generate(
+        workspace_path='D:/Codex/Trading assistant',
+        goal='Second generation',
+        artifact=build_artifact('Summary 2', 'backend/app/main.py'),
+    )
+    store.update_after_apply(ApplyResult(applied=['backend/app/main.py']))
+
+    restored = store.restore_generation(first_entry_id)
+
+    assert restored.goal == 'First generation'
+    assert restored.artifact is not None
+    assert restored.artifact.summary == 'Summary 1'
+    assert restored.selected_file_paths == ['frontend/src/App.tsx']
+    assert restored.selected_file_path == 'frontend/src/App.tsx'
+    assert restored.apply_result is None
+
+
+def test_restore_generation_raises_when_entry_missing(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path / '.local' / 'session.json')
+
+    try:
+        store.restore_generation('missing-entry')
+    except KeyError as error:
+        assert str(error) == "'generation history entry not found'"
+    else:
+        raise AssertionError('restore_generation should raise for missing history entry')

@@ -88,6 +88,9 @@ def test_generate_returns_structured_artifacts(monkeypatch, tmp_path) -> None:
     assert snapshot.workspace_path == 'D:/Codex/Trading assistant'
     assert snapshot.goal == 'Build a stock trading system MVP'
     assert snapshot.artifact is not None
+    assert len(snapshot.generation_history) == 1
+    assert snapshot.generation_history[0].goal == 'Build a stock trading system MVP'
+    assert snapshot.generation_history[0].summary == 'MVP scaffold ready.'
     assert provider.last_prompt_bundle is not None
     assert 'Workspace Summary:' in provider.last_prompt_bundle.user_prompt
     assert 'React frontend + FastAPI backend.' in provider.last_prompt_bundle.user_prompt

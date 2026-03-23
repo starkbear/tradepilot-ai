@@ -4,8 +4,22 @@ import { ArtifactPanel } from './components/ArtifactPanel'
 import { LoginShell } from './components/LoginShell'
 import { WorkspacePanel } from './components/WorkspacePanel'
 import { DEFAULT_MODEL, DEFAULT_PROVIDER_ID } from './lib/defaults'
-import { applyFiles, clearSession, generateArtifact, loadSession, loginLocalSession, readWorkspaceFile } from './lib/api'
-import type { ApplyResult, GenerationArtifact, PersistedSessionSnapshot, ScreenState } from './lib/types'
+import {
+  applyFiles,
+  clearSession,
+  generateArtifact,
+  loadSession,
+  loginLocalSession,
+  readWorkspaceFile,
+  restoreGeneration,
+} from './lib/api'
+import type {
+  ApplyResult,
+  GenerationArtifact,
+  GenerationHistoryEntry,
+  PersistedSessionSnapshot,
+  ScreenState,
+} from './lib/types'
 
 export default function App() {
   const [screen, setScreen] = useState<ScreenState>('login')
@@ -13,6 +27,7 @@ export default function App() {
   const [workspacePath, setWorkspacePath] = useState('')
   const [goal, setGoal] = useState('')
   const [recentWorkspaces, setRecentWorkspaces] = useState<string[]>([])
+  const [generationHistory, setGenerationHistory] = useState<GenerationHistoryEntry[]>([])
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [artifact, setArtifact] = useState<GenerationArtifact | null>(null)
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null)
@@ -22,6 +37,7 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
   const [isClearingSession, setIsClearingSession] = useState(false)
+  const [isRestoringGeneration, setIsRestoringGeneration] = useState(false)
   const [applyResult, setApplyResult] = useState<ApplyResult | null>(null)
   const [applyErrorMessage, setApplyErrorMessage] = useState<string | null>(null)
   const [rewritePreviewStatus, setRewritePreviewStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
@@ -40,6 +56,7 @@ export default function App() {
     setWorkspacePath(snapshot.workspace_path)
     setGoal(snapshot.goal)
     setRecentWorkspaces(snapshot.recent_workspaces)
+    setGenerationHistory(snapshot.generation_history)
     setArtifact(snapshot.artifact)
     setApplyResult(snapshot.apply_result)
     setApplyErrorMessage(null)
@@ -153,6 +170,12 @@ export default function App() {
         model: DEFAULT_MODEL,
       })
       applyGeneratedArtifact(nextArtifact)
+      try {
+        const snapshot = await loadSession()
+        applyRestoredSession(snapshot)
+      } catch {
+        // Keep the freshly generated artifact visible even if session refresh fails.
+      }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Generation failed')
     } finally {
@@ -174,6 +197,20 @@ export default function App() {
       setErrorMessage(error instanceof Error ? error.message : 'Clearing session failed')
     } finally {
       setIsClearingSession(false)
+    }
+  }
+
+  async function handleRestoreGeneration(generationId: string) {
+    setIsRestoringGeneration(true)
+    setErrorMessage(null)
+
+    try {
+      const snapshot = await restoreGeneration(generationId)
+      applyRestoredSession(snapshot)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Restoring generation failed')
+    } finally {
+      setIsRestoringGeneration(false)
     }
   }
 
@@ -243,14 +280,17 @@ export default function App() {
             workspacePath={workspacePath}
             goal={goal}
             recentWorkspaces={recentWorkspaces}
+            generationHistory={generationHistory}
             errorMessage={errorMessage}
             isGenerating={isGenerating}
             isClearingSession={isClearingSession}
+            isRestoringGeneration={isRestoringGeneration}
             onWorkspacePathChange={setWorkspacePath}
             onGoalChange={setGoal}
             onGenerate={handleGenerate}
             onSelectRecentWorkspace={setWorkspacePath}
             onClearSession={handleClearSession}
+            onRestoreGeneration={handleRestoreGeneration}
           />
           {artifact ? (
             <ArtifactPanel

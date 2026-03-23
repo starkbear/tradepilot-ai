@@ -37,6 +37,15 @@ const GENERATED_ARTIFACT = {
   next_steps: ['Review generated files'],
 }
 
+const RESTORED_ARTIFACT = {
+  ...GENERATED_ARTIFACT,
+  summary: 'Restored scaffold ready.',
+  files: [
+    { path: 'docs/plan.md', purpose: 'plan', content: '# Restored', selected: true },
+  ],
+  changes: [],
+}
+
 const EMPTY_SESSION = {
   display_name: '',
   recent_workspaces: [],
@@ -50,6 +59,7 @@ const EMPTY_SESSION = {
   selected_file_path: null,
   selected_change_path: null,
   apply_result: null,
+  generation_history: [],
 }
 
 function buildFetchResponse({ ok, status = 200, body }: { ok: boolean; status?: number; body: unknown }) {
@@ -94,6 +104,35 @@ function withLoginResponse(displayName = 'Wei') {
   })
 }
 
+function withGenerationSessionResponse(
+  artifact = GENERATED_ARTIFACT,
+  overrides: Record<string, unknown> = {},
+) {
+  return withSessionResponse(
+    buildSessionSnapshot({
+      display_name: 'Wei',
+      screen: 'workspace',
+      workspace_path: 'D:/Codex/Trading assistant',
+      goal: 'Build a stock trading system MVP',
+      artifact,
+      selected_file_paths: artifact.files.map((file) => file.path),
+      selected_change_paths: artifact.changes.map((change) => change.path),
+      selected_file_path: artifact.files[0]?.path ?? null,
+      selected_change_path: null,
+      generation_history: [
+        {
+          id: 'gen-latest',
+          created_at: '2026-03-23T10:00:00Z',
+          goal: 'Build a stock trading system MVP',
+          summary: artifact.summary,
+          artifact,
+        },
+      ],
+      ...overrides,
+    }),
+  )
+}
+
 async function logIn(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/display name/i), 'Wei')
   await user.click(screen.getByRole('button', { name: /enter workspace/i }))
@@ -135,6 +174,15 @@ describe('App', () => {
             issues: [],
             errors: [],
           },
+          generation_history: [
+            {
+              id: 'gen-1',
+              created_at: '2026-03-23T09:00:00Z',
+              goal: 'Continue refining the trading assistant',
+              summary: 'MVP scaffold ready.',
+              artifact: GENERATED_ARTIFACT,
+            },
+          ],
         }),
       ),
     )
@@ -147,6 +195,150 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: /generated plan/i })).toBeInTheDocument()
     expect(screen.getByText(/applied: 1/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /D:\/Projects\/TradePilot/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /recent generations/i })).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('region', { name: /recent generations/i })).getByRole('button', {
+        name: /restore continue refining the trading assistant/i,
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it('restores a selected generation from the history panel', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            selected_file_paths: ['README.md'],
+            selected_change_paths: ['backend/app/main.py'],
+            selected_file_path: 'README.md',
+            selected_change_path: null,
+            apply_result: {
+              validated: ['README.md'],
+              applied: ['README.md'],
+              applied_files: ['README.md'],
+              applied_changes: [],
+              skipped: [],
+              issues: [],
+              errors: [],
+            },
+            generation_history: [
+              {
+                id: 'gen-2',
+                created_at: '2026-03-23T09:15:00Z',
+                goal: 'Restored goal',
+                summary: 'Restored scaffold ready.',
+                artifact: RESTORED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: true,
+          body: {
+            success: true,
+            message: 'generation restored',
+            data: buildSessionSnapshot({
+              display_name: 'Wei',
+              screen: 'workspace',
+              workspace_path: 'D:/Codex/Trading assistant',
+              goal: 'Restored goal',
+              artifact: RESTORED_ARTIFACT,
+              selected_file_paths: ['docs/plan.md'],
+              selected_change_paths: [],
+              selected_file_path: 'docs/plan.md',
+              selected_change_path: null,
+              apply_result: null,
+              generation_history: [
+                {
+                  id: 'gen-2',
+                  created_at: '2026-03-23T09:15:00Z',
+                  goal: 'Restored goal',
+                  summary: 'Restored scaffold ready.',
+                  artifact: RESTORED_ARTIFACT,
+                },
+              ],
+            }),
+            errors: [],
+          },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: /generated plan/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /restore restored goal/i }))
+
+    expect(screen.getByLabelText(/project goal/i)).toHaveValue('Restored goal')
+    expect(screen.getByRole('button', { name: 'docs/plan.md' })).toBeInTheDocument()
+    expect(screen.queryByText(/applied: 1/i)).not.toBeInTheDocument()
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/session/restore-generation',
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    )
+  })
+
+  it('keeps the current artifact visible when restoring history fails', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            selected_file_paths: ['README.md'],
+            selected_change_paths: ['backend/app/main.py'],
+            selected_file_path: 'README.md',
+            selected_change_path: null,
+            generation_history: [
+              {
+                id: 'gen-missing',
+                created_at: '2026-03-23T09:15:00Z',
+                goal: 'Broken restore target',
+                summary: 'Old scaffold',
+                artifact: RESTORED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: false,
+          status: 404,
+          body: {
+            success: false,
+            message: 'generation history entry not found',
+            data: null,
+            errors: ['generation history entry not found'],
+          },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+
+    expect(await screen.findByText(/mvp scaffold ready/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /restore broken restore target/i }))
+
+    expect(await screen.findByText(/generation history entry not found/i)).toBeInTheDocument()
+    expect(screen.getByText(/mvp scaffold ready/i)).toBeInTheDocument()
   })
 
   it('fills the workspace path from a recent workspace shortcut', async () => {
@@ -221,7 +413,8 @@ describe('App', () => {
               errors: [],
             },
           }),
-        ),
+        )
+        .mockResolvedValueOnce(withGenerationSessionResponse()),
     )
 
     render(<App />)
@@ -249,6 +442,7 @@ describe('App', () => {
           },
         }),
       )
+      .mockResolvedValueOnce(withGenerationSessionResponse())
       .mockResolvedValueOnce(
         buildFetchResponse({
           ok: true,
@@ -295,6 +489,7 @@ describe('App', () => {
           },
         }),
       )
+      .mockResolvedValueOnce(withGenerationSessionResponse())
       .mockResolvedValueOnce(
         buildFetchResponse({
           ok: false,
@@ -336,7 +531,8 @@ describe('App', () => {
               errors: [],
             },
           }),
-        ),
+        )
+        .mockResolvedValueOnce(withGenerationSessionResponse()),
     )
 
     render(<App />)
@@ -364,6 +560,7 @@ describe('App', () => {
           },
         }),
       )
+      .mockResolvedValueOnce(withGenerationSessionResponse())
       .mockResolvedValueOnce(
         buildFetchResponse({
           ok: true,
@@ -394,10 +591,10 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /apply selected files/i }))
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledTimes(4)
+      expect(fetchMock).toHaveBeenCalledTimes(5)
     })
 
-    const applyRequest = JSON.parse(fetchMock.mock.calls[3][1]?.body as string)
+    const applyRequest = JSON.parse(fetchMock.mock.calls[4][1]?.body as string)
     expect(applyRequest.files).toHaveLength(1)
     expect(applyRequest.files[0].path).toBe('backend/app/main.py')
     expect(applyRequest.changes).toHaveLength(1)
@@ -423,6 +620,7 @@ describe('App', () => {
             },
           }),
         )
+        .mockResolvedValueOnce(withGenerationSessionResponse())
         .mockResolvedValueOnce(
           buildFetchResponse({
             ok: true,

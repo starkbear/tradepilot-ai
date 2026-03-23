@@ -28,6 +28,14 @@ export type GenerationArtifact = {
   next_steps: string[]
 }
 
+export type GenerationHistoryEntry = {
+  id: string
+  created_at: string
+  goal: string
+  summary: string
+  artifact: GenerationArtifact
+}
+
 export type ApplyIssue = {
   path: string
   stage: 'validation' | 'apply'
@@ -59,6 +67,7 @@ export type PersistedSessionSnapshot = {
   workspace_path: string
   goal: string
   artifact: GenerationArtifact | null
+  generation_history: GenerationHistoryEntry[]
   selected_file_paths: string[]
   selected_change_paths: string[]
   selected_file_path: string | null
