@@ -91,3 +91,48 @@ def test_restore_generation_returns_404_when_entry_missing(monkeypatch, tmp_path
 
     assert response.status_code == 404
     assert 'not found' in response.json()['message']
+
+
+def test_delete_generation_returns_updated_snapshot(monkeypatch, tmp_path: Path) -> None:
+    store = install_temp_session_store(monkeypatch, tmp_path)
+    generated = store.update_after_generate(
+        workspace_path='D:/Codex/Trading assistant',
+        goal='Initial scaffold',
+        artifact=build_artifact('Initial summary'),
+    )
+    history_entry_id = generated.generation_history[0].id
+    client = TestClient(app)
+
+    response = client.delete(f'/api/session/generations/{history_entry_id}')
+
+    assert response.status_code == 200
+    payload = response.json()['data']
+    assert payload['generation_history'] == []
+    assert payload['artifact']['summary'] == 'Initial summary'
+
+
+def test_delete_generation_returns_404_when_entry_missing(monkeypatch, tmp_path: Path) -> None:
+    install_temp_session_store(monkeypatch, tmp_path)
+    client = TestClient(app)
+
+    response = client.delete('/api/session/generations/missing-entry')
+
+    assert response.status_code == 404
+    assert 'not found' in response.json()['message']
+
+
+def test_clear_generation_history_returns_updated_snapshot(monkeypatch, tmp_path: Path) -> None:
+    store = install_temp_session_store(monkeypatch, tmp_path)
+    store.update_after_generate(
+        workspace_path='D:/Codex/Trading assistant',
+        goal='Initial scaffold',
+        artifact=build_artifact('Initial summary'),
+    )
+    client = TestClient(app)
+
+    response = client.delete('/api/session/generations')
+
+    assert response.status_code == 200
+    payload = response.json()['data']
+    assert payload['generation_history'] == []
+    assert payload['artifact']['summary'] == 'Initial summary'
