@@ -90,6 +90,7 @@ def test_update_after_generate_records_generation_history_and_defaults(tmp_path:
     assert snapshot.generation_history[0].goal == 'Build the first scaffold'
     assert snapshot.generation_history[0].summary == 'First scaffold ready.'
     assert snapshot.generation_history[0].artifact.summary == 'First scaffold ready.'
+    assert snapshot.active_generation_id == snapshot.generation_history[0].id
 
 
 def test_update_after_generate_caps_generation_history_at_five_entries(tmp_path: Path) -> None:
@@ -137,6 +138,7 @@ def test_restore_generation_resets_active_state_from_history(tmp_path: Path) -> 
     assert restored.selected_file_paths == ['frontend/src/App.tsx']
     assert restored.selected_file_path == 'frontend/src/App.tsx'
     assert restored.apply_result is None
+    assert restored.active_generation_id == first_entry_id
 
 
 def test_restore_generation_raises_when_entry_missing(tmp_path: Path) -> None:
@@ -169,6 +171,21 @@ def test_delete_generation_removes_only_the_selected_history_entry(tmp_path: Pat
     assert [entry.goal for entry in updated.generation_history] == ['Second generation']
     assert updated.artifact is not None
     assert updated.artifact.summary == 'Summary 2'
+    assert updated.active_generation_id == updated.generation_history[0].id
+
+
+def test_delete_generation_clears_active_generation_id_when_active_entry_is_removed(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path / '.local' / 'session.json')
+    generated = store.update_after_generate(
+        workspace_path='D:/Codex/Trading assistant',
+        goal='Only generation',
+        artifact=build_artifact('Summary 1', 'frontend/src/App.tsx'),
+    )
+
+    updated = store.delete_generation(generated.generation_history[0].id)
+
+    assert updated.generation_history == []
+    assert updated.active_generation_id is None
 
 
 def test_clear_generation_history_keeps_the_active_artifact(tmp_path: Path) -> None:
@@ -189,3 +206,4 @@ def test_clear_generation_history_keeps_the_active_artifact(tmp_path: Path) -> N
     assert updated.generation_history == []
     assert updated.artifact is not None
     assert updated.artifact.summary == 'Summary 2'
+    assert updated.active_generation_id is None

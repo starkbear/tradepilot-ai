@@ -146,15 +146,38 @@ button:disabled {
   background: rgba(21, 36, 51, 0.04);
 }
 
+.generation-history-item.is-active {
+  border-color: rgba(30, 93, 79, 0.4);
+  background: rgba(30, 93, 79, 0.08);
+}
+
 .generation-history-copy {
   display: grid;
   gap: 0.3rem;
+}
+
+.generation-history-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
 }
 
 .generation-history-meta {
   margin: 0;
   color: rgba(21, 36, 51, 0.7);
   font-size: 0.92rem;
+}
+
+.generation-history-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(30, 93, 79, 0.14);
+  color: #1e5d4f;
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .generation-history-actions {

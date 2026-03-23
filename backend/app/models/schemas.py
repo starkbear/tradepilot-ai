@@ -22,6 +22,7 @@ class PersistedSessionSnapshot(BaseModel):
     workspace_path: str = ''
     goal: str = ''
     artifact: 'GenerationArtifact | None' = None
+    active_generation_id: str | None = None
     generation_history: list['GenerationHistoryEntry'] = Field(default_factory=list)
     selected_file_paths: list[str] = Field(default_factory=list)
     selected_change_paths: list[str] = Field(default_factory=list)

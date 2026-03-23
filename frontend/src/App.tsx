@@ -30,6 +30,7 @@ export default function App() {
   const [goal, setGoal] = useState('')
   const [recentWorkspaces, setRecentWorkspaces] = useState<string[]>([])
   const [generationHistory, setGenerationHistory] = useState<GenerationHistoryEntry[]>([])
+  const [activeGenerationId, setActiveGenerationId] = useState<string | null>(null)
   const [expandedGenerationId, setExpandedGenerationId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [artifact, setArtifact] = useState<GenerationArtifact | null>(null)
@@ -61,6 +62,7 @@ export default function App() {
     setGoal(snapshot.goal)
     setRecentWorkspaces(snapshot.recent_workspaces)
     setGenerationHistory(snapshot.generation_history)
+    setActiveGenerationId(snapshot.active_generation_id)
     setArtifact(snapshot.artifact)
     setApplyResult(snapshot.apply_result)
     setApplyErrorMessage(null)
@@ -318,6 +320,7 @@ export default function App() {
             goal={goal}
             recentWorkspaces={recentWorkspaces}
             generationHistory={generationHistory}
+            activeGenerationId={activeGenerationId}
             expandedGenerationId={expandedGenerationId}
             errorMessage={errorMessage}
             isGenerating={isGenerating}

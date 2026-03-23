@@ -59,6 +59,7 @@ class SessionStore:
                 'workspace_path': workspace_path,
                 'goal': goal,
                 'artifact': artifact,
+                'active_generation_id': history_entry.id,
                 'generation_history': [history_entry, *self._session.generation_history][:MAX_GENERATION_HISTORY],
                 'selected_file_paths': [file.path for file in artifact.files],
                 'selected_change_paths': [change.path for change in artifact.changes],
@@ -85,6 +86,7 @@ class SessionStore:
                 'screen': 'workspace',
                 'goal': entry.goal,
                 'artifact': artifact,
+                'active_generation_id': entry.id,
                 'selected_file_paths': [file.path for file in artifact.files],
                 'selected_change_paths': [change.path for change in artifact.changes],
                 'selected_file_path': artifact.files[0].path if artifact.files else None,
@@ -98,8 +100,13 @@ class SessionStore:
         if not any(item.id == generation_id for item in self._session.generation_history):
             raise KeyError('generation history entry not found')
 
+        active_generation_id = self._session.active_generation_id
+        if active_generation_id == generation_id:
+            active_generation_id = None
+
         session = self._session.model_copy(
             update={
+                'active_generation_id': active_generation_id,
                 'generation_history': [
                     item for item in self._session.generation_history if item.id != generation_id
                 ]
@@ -108,7 +115,7 @@ class SessionStore:
         return self.save(session)
 
     def clear_generation_history(self) -> PersistedSessionSnapshot:
-        session = self._session.model_copy(update={'generation_history': []})
+        session = self._session.model_copy(update={'generation_history': [], 'active_generation_id': None})
         return self.save(session)
 
     def get_session(self) -> PersistedSessionSnapshot:

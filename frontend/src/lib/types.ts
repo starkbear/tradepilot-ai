@@ -67,6 +67,7 @@ export type PersistedSessionSnapshot = {
   workspace_path: string
   goal: string
   artifact: GenerationArtifact | null
+  active_generation_id: string | null
   generation_history: GenerationHistoryEntry[]
   selected_file_paths: string[]
   selected_change_paths: string[]
