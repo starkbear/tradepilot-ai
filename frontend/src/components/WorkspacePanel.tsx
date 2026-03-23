@@ -7,6 +7,7 @@ type WorkspacePanelProps = {
   goal: string
   recentWorkspaces: string[]
   generationHistory: GenerationHistoryEntry[]
+  activeGenerationId: string | null
   expandedGenerationId: string | null
   errorMessage: string | null
   isGenerating: boolean
@@ -29,6 +30,7 @@ export function WorkspacePanel({
   goal,
   recentWorkspaces,
   generationHistory,
+  activeGenerationId,
   expandedGenerationId,
   errorMessage,
   isGenerating,
@@ -78,6 +80,7 @@ export function WorkspacePanel({
       ) : null}
       <GenerationHistoryPanel
         entries={generationHistory}
+        activeGenerationId={activeGenerationId}
         isRestoring={isRestoringGeneration}
         isManagingHistory={isManagingGenerationHistory}
         expandedGenerationId={expandedGenerationId}

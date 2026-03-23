@@ -54,6 +54,7 @@ const EMPTY_SESSION = {
   workspace_path: '',
   goal: '',
   artifact: null,
+  active_generation_id: null,
   selected_file_paths: [],
   selected_change_paths: [],
   selected_file_path: null,
@@ -128,6 +129,7 @@ function withGenerationSessionResponse(
           artifact,
         },
       ],
+      active_generation_id: 'gen-latest',
       ...overrides,
     }),
   )
@@ -406,6 +408,39 @@ describe('App', () => {
     expect(within(historyPanel).getByText(/2 changes/i)).toBeInTheDocument()
   })
 
+  it('shows an active badge and current state for the active generation entry', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            active_generation_id: 'gen-1',
+            generation_history: [
+              {
+                id: 'gen-1',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'First history entry',
+                summary: 'First summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    expect(within(historyPanel).getByText(/active/i)).toBeInTheDocument()
+    expect(within(historyPanel).getByRole('button', { name: /current first history entry/i })).toBeDisabled()
+  })
+
   it('expands a generation history preview when requested', async () => {
     const user = userEvent.setup()
     vi.stubGlobal(
@@ -489,6 +524,145 @@ describe('App', () => {
     const secondPreview = within(historyPanel).getByRole('region', { name: /preview second history entry/i })
     expect(secondPreview).toBeInTheDocument()
     expect(within(secondPreview).getByText(/second summary/i)).toBeInTheDocument()
+    expect(within(secondPreview).queryByText(/apply summary/i)).not.toBeInTheDocument()
+  })
+
+  it('shows apply summary metadata for a generation history entry when available', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-apply',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'Applied history entry',
+                summary: 'Applied summary',
+                artifact: GENERATED_ARTIFACT,
+                apply_summary: {
+                  validated_count: 4,
+                  applied_count: 3,
+                  applied_files_count: 2,
+                  applied_changes_count: 1,
+                  issue_count: 1,
+                  error_count: 0,
+                  last_applied_at: '2026-03-23T09:10:00Z',
+                },
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    expect(within(historyPanel).getByText(/applied 3 items/i)).toBeInTheDocument()
+    expect(within(historyPanel).getByText(/2 files • 1 changes/i)).toBeInTheDocument()
+    expect(within(historyPanel).getByText(/1 issues/i)).toBeInTheDocument()
+
+    await user.click(within(historyPanel).getByRole('button', { name: /preview applied history entry/i }))
+
+    const preview = within(historyPanel).getByRole('region', { name: /preview applied history entry/i })
+    expect(within(preview).getByText(/apply summary/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/validated: 4/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/applied: 3/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/files: 2/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/changes: 1/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/issues: 1/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/errors: 0/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/last applied: 2026-03-23 09:10 utc/i)).toBeInTheDocument()
+  })
+
+  it('moves the active badge after restoring a different generation', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            active_generation_id: 'gen-1',
+            generation_history: [
+              {
+                id: 'gen-1',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'First history entry',
+                summary: 'First summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+              {
+                id: 'gen-2',
+                created_at: '2026-03-23T09:05:00Z',
+                goal: 'Second history entry',
+                summary: 'Second summary',
+                artifact: RESTORED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: true,
+          body: {
+            success: true,
+            message: 'generation restored',
+            data: buildSessionSnapshot({
+              display_name: 'Wei',
+              screen: 'workspace',
+              workspace_path: 'D:/Codex/Trading assistant',
+              goal: 'Second history entry',
+              artifact: RESTORED_ARTIFACT,
+              active_generation_id: 'gen-2',
+              generation_history: [
+                {
+                  id: 'gen-1',
+                  created_at: '2026-03-23T09:00:00Z',
+                  goal: 'First history entry',
+                  summary: 'First summary',
+                  artifact: GENERATED_ARTIFACT,
+                },
+                {
+                  id: 'gen-2',
+                  created_at: '2026-03-23T09:05:00Z',
+                  goal: 'Second history entry',
+                  summary: 'Second summary',
+                  artifact: RESTORED_ARTIFACT,
+                },
+              ],
+              selected_file_paths: ['docs/plan.md'],
+              selected_change_paths: [],
+              selected_file_path: 'docs/plan.md',
+              selected_change_path: null,
+              apply_result: null,
+            }),
+            errors: [],
+          },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /restore second history entry/i }))
+
+    const currentButton = within(historyPanel).getByRole('button', { name: /current second history entry/i })
+    expect(currentButton).toBeDisabled()
+    expect(within(historyPanel).getByText(/active/i)).toBeInTheDocument()
   })
 
   it('removes a single generation history entry from the panel', async () => {
@@ -566,6 +740,135 @@ describe('App', () => {
         method: 'DELETE',
       }),
     )
+  })
+
+  it('removes the active badge when deleting the active generation', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            active_generation_id: 'gen-1',
+            generation_history: [
+              {
+                id: 'gen-1',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'First history entry',
+                summary: 'First summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: true,
+          body: {
+            success: true,
+            message: 'generation deleted',
+            data: buildSessionSnapshot({
+              display_name: 'Wei',
+              screen: 'workspace',
+              workspace_path: 'D:/Codex/Trading assistant',
+              goal: 'Current goal',
+              artifact: GENERATED_ARTIFACT,
+              active_generation_id: null,
+              generation_history: [],
+            }),
+            errors: [],
+          },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /remove first history entry/i }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('region', { name: /recent generations/i })).not.toBeInTheDocument()
+    })
+    expect(screen.queryByText(/active/i)).not.toBeInTheDocument()
+  })
+
+  it('preserves the active badge when deleting a different generation', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            active_generation_id: 'gen-2',
+            generation_history: [
+              {
+                id: 'gen-1',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'First history entry',
+                summary: 'First summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+              {
+                id: 'gen-2',
+                created_at: '2026-03-23T09:05:00Z',
+                goal: 'Second history entry',
+                summary: 'Second summary',
+                artifact: RESTORED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: true,
+          body: {
+            success: true,
+            message: 'generation deleted',
+            data: buildSessionSnapshot({
+              display_name: 'Wei',
+              screen: 'workspace',
+              workspace_path: 'D:/Codex/Trading assistant',
+              goal: 'Current goal',
+              artifact: RESTORED_ARTIFACT,
+              active_generation_id: 'gen-2',
+              generation_history: [
+                {
+                  id: 'gen-2',
+                  created_at: '2026-03-23T09:05:00Z',
+                  goal: 'Second history entry',
+                  summary: 'Second summary',
+                  artifact: RESTORED_ARTIFACT,
+                },
+              ],
+            }),
+            errors: [],
+          },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /remove first history entry/i }))
+
+    await waitFor(() => {
+      expect(screen.queryByText(/first history entry/i)).not.toBeInTheDocument()
+    })
+    expect(screen.getByRole('button', { name: /current second history entry/i })).toBeDisabled()
   })
 
   it('clears generation history and hides the history panel', async () => {

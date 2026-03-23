@@ -3,6 +3,7 @@ import { GenerationHistoryEntryPreview } from './GenerationHistoryEntryPreview'
 
 type GenerationHistoryPanelProps = {
   entries: GenerationHistoryEntry[]
+  activeGenerationId: string | null
   isRestoring: boolean
   isManagingHistory: boolean
   expandedGenerationId: string | null
@@ -14,6 +15,7 @@ type GenerationHistoryPanelProps = {
 
 export function GenerationHistoryPanel({
   entries,
+  activeGenerationId,
   isRestoring,
   isManagingHistory,
   expandedGenerationId,
@@ -32,6 +34,23 @@ export function GenerationHistoryPanel({
     return createdAt.replace('T', ' ').slice(0, 16) + ' UTC'
   }
 
+  function buildApplySummary(entry: GenerationHistoryEntry) {
+    const applySummary = entry.apply_summary
+
+    if (!applySummary) {
+      return null
+    }
+
+    const issueLabel =
+      applySummary.issue_count === 1 ? '1 issues' : `${applySummary.issue_count} issues`
+
+    return [
+      `Applied ${applySummary.applied_count} items`,
+      `${applySummary.applied_files_count} files • ${applySummary.applied_changes_count} changes`,
+      issueLabel,
+    ]
+  }
+
   return (
     <section className="generation-history" aria-label="Recent generations">
       <div className="generation-history-header">
@@ -42,14 +61,25 @@ export function GenerationHistoryPanel({
       </div>
       <ul className="generation-history-list">
         {entries.map((entry) => (
-          <li key={entry.id} className="generation-history-item">
+          <li
+            key={entry.id}
+            className={`generation-history-item${activeGenerationId === entry.id ? ' is-active' : ''}`}
+          >
             <div className="generation-history-copy">
-              <p className="generation-history-goal">{entry.goal}</p>
+              <div className="generation-history-title-row">
+                <p className="generation-history-goal">{entry.goal}</p>
+                {activeGenerationId === entry.id ? <span className="generation-history-badge">Active</span> : null}
+              </div>
               <p className="generation-history-meta">{`Saved ${formatSavedAt(entry.created_at)}`}</p>
               <p className="generation-history-summary">{entry.summary}</p>
               <p className="generation-history-meta">
                 {`${entry.artifact.files.length} files • ${entry.artifact.changes.length} changes`}
               </p>
+              {buildApplySummary(entry)?.map((line) => (
+                <p key={`${entry.id}-${line}`} className="generation-history-meta">
+                  {line}
+                </p>
+              ))}
             </div>
             <div className="generation-history-actions">
               <button
@@ -64,11 +94,11 @@ export function GenerationHistoryPanel({
               <button
                 type="button"
                 className="secondary-button"
-                aria-label={`Restore ${entry.goal}`}
-                disabled={isBusy}
+                aria-label={`${activeGenerationId === entry.id ? 'Current' : 'Restore'} ${entry.goal}`}
+                disabled={isBusy || activeGenerationId === entry.id}
                 onClick={() => onRestore(entry.id)}
               >
-                {isRestoring ? 'Restoring...' : 'Restore'}
+                {activeGenerationId === entry.id ? 'Current' : isRestoring ? 'Restoring...' : 'Restore'}
               </button>
               <button
                 type="button"

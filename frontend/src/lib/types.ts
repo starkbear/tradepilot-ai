@@ -28,12 +28,23 @@ export type GenerationArtifact = {
   next_steps: string[]
 }
 
+export type GenerationApplySummary = {
+  validated_count: number
+  applied_count: number
+  applied_files_count: number
+  applied_changes_count: number
+  issue_count: number
+  error_count: number
+  last_applied_at: string
+}
+
 export type GenerationHistoryEntry = {
   id: string
   created_at: string
   goal: string
   summary: string
   artifact: GenerationArtifact
+  apply_summary?: GenerationApplySummary | null
 }
 
 export type ApplyIssue = {
@@ -67,6 +78,7 @@ export type PersistedSessionSnapshot = {
   workspace_path: string
   goal: string
   artifact: GenerationArtifact | null
+  active_generation_id: string | null
   generation_history: GenerationHistoryEntry[]
   selected_file_paths: string[]
   selected_change_paths: string[]

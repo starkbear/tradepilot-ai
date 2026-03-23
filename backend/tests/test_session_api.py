@@ -81,6 +81,7 @@ def test_restore_generation_returns_updated_snapshot(monkeypatch, tmp_path: Path
     assert payload['goal'] == 'Initial scaffold'
     assert payload['artifact']['summary'] == 'Initial summary'
     assert payload['selected_file_paths'] == ['README.md']
+    assert payload['active_generation_id'] == history_entry_id
 
 
 def test_restore_generation_returns_404_when_entry_missing(monkeypatch, tmp_path: Path) -> None:
@@ -109,6 +110,7 @@ def test_delete_generation_returns_updated_snapshot(monkeypatch, tmp_path: Path)
     payload = response.json()['data']
     assert payload['generation_history'] == []
     assert payload['artifact']['summary'] == 'Initial summary'
+    assert payload['active_generation_id'] is None
 
 
 def test_delete_generation_returns_404_when_entry_missing(monkeypatch, tmp_path: Path) -> None:
@@ -136,3 +138,4 @@ def test_clear_generation_history_returns_updated_snapshot(monkeypatch, tmp_path
     payload = response.json()['data']
     assert payload['generation_history'] == []
     assert payload['artifact']['summary'] == 'Initial summary'
+    assert payload['active_generation_id'] is None
