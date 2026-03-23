@@ -628,6 +628,98 @@ describe('App', () => {
     expect(within(historyPanel).queryByText(/^draft$/i)).not.toBeInTheDocument()
   })
 
+  it('groups focus items ahead of recent history and sorts recent items by priority and recency', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            active_generation_id: 'gen-active',
+            generation_history: [
+              {
+                id: 'gen-applied',
+                created_at: '2026-03-23T09:40:00Z',
+                goal: 'Applied history entry',
+                summary: 'Applied summary',
+                artifact: GENERATED_ARTIFACT,
+                apply_summary: {
+                  validated_count: 2,
+                  applied_count: 2,
+                  applied_files_count: 1,
+                  applied_changes_count: 1,
+                  issue_count: 0,
+                  error_count: 0,
+                  last_applied_at: '2026-03-23T09:45:00Z',
+                },
+              },
+              {
+                id: 'gen-attention',
+                created_at: '2026-03-23T09:20:00Z',
+                goal: 'Needs attention entry',
+                summary: 'Attention summary',
+                artifact: GENERATED_ARTIFACT,
+                apply_summary: {
+                  validated_count: 2,
+                  applied_count: 1,
+                  applied_files_count: 1,
+                  applied_changes_count: 0,
+                  issue_count: 1,
+                  error_count: 0,
+                  last_applied_at: '2026-03-23T09:25:00Z',
+                },
+              },
+              {
+                id: 'gen-draft-newer',
+                created_at: '2026-03-23T09:30:00Z',
+                goal: 'Newer draft entry',
+                summary: 'Draft summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+              {
+                id: 'gen-draft-older',
+                created_at: '2026-03-23T09:10:00Z',
+                goal: 'Older draft entry',
+                summary: 'Older draft summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+              {
+                id: 'gen-active',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'Active entry',
+                summary: 'Active summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const focusRegion = await screen.findByRole('region', { name: /focus now/i })
+    const recentRegion = screen.getByRole('region', { name: /recent history/i })
+
+    expect(within(focusRegion).getByText(/active entry/i)).toBeInTheDocument()
+    expect(within(focusRegion).getByText(/needs attention entry/i)).toBeInTheDocument()
+    expect(within(recentRegion).getByText(/newer draft entry/i)).toBeInTheDocument()
+    expect(within(recentRegion).getByText(/older draft entry/i)).toBeInTheDocument()
+    expect(within(recentRegion).getByText(/applied history entry/i)).toBeInTheDocument()
+
+    const focusItems = within(focusRegion).getAllByRole('listitem')
+    expect(focusItems[0]).toHaveTextContent(/active entry/i)
+    expect(focusItems[1]).toHaveTextContent(/needs attention entry/i)
+
+    const recentItems = within(recentRegion).getAllByRole('listitem')
+    expect(recentItems[0]).toHaveTextContent(/newer draft entry/i)
+    expect(recentItems[1]).toHaveTextContent(/older draft entry/i)
+    expect(recentItems[2]).toHaveTextContent(/applied history entry/i)
+  })
   it('moves the active badge after restoring a different generation', async () => {
     const user = userEvent.setup()
     const fetchMock = vi
@@ -1431,3 +1523,4 @@ describe('App', () => {
     )
   })
 })
+
