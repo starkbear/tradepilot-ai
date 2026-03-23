@@ -438,6 +438,7 @@ describe('App', () => {
 
     const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
     expect(within(historyPanel).getByText(/active/i)).toBeInTheDocument()
+    expect(within(historyPanel).getByText(/^draft$/i)).toBeInTheDocument()
     expect(within(historyPanel).getByRole('button', { name: /current first history entry/i })).toBeDisabled()
   })
 
@@ -565,8 +566,11 @@ describe('App', () => {
     render(<App />)
 
     const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    expect(within(historyPanel).getByText(/^needs attention$/i)).toBeInTheDocument()
     expect(within(historyPanel).getByText(/applied 3 items/i)).toBeInTheDocument()
-    expect(within(historyPanel).getByText(/2 files • 1 changes/i)).toBeInTheDocument()
+    expect(
+      within(historyPanel).getByText((content) => content.includes('2 files') && content.includes('1 changes')),
+    ).toBeInTheDocument()
     expect(within(historyPanel).getByText(/1 issues/i)).toBeInTheDocument()
 
     await user.click(within(historyPanel).getByRole('button', { name: /preview applied history entry/i }))
@@ -580,6 +584,48 @@ describe('App', () => {
     expect(within(preview).getByText(/issues: 1/i)).toBeInTheDocument()
     expect(within(preview).getByText(/errors: 0/i)).toBeInTheDocument()
     expect(within(preview).getByText(/last applied: 2026-03-23 09:10 utc/i)).toBeInTheDocument()
+  })
+
+  it('shows an applied badge when a generation was applied cleanly', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-clean',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'Clean apply entry',
+                summary: 'Clean summary',
+                artifact: GENERATED_ARTIFACT,
+                apply_summary: {
+                  validated_count: 3,
+                  applied_count: 3,
+                  applied_files_count: 2,
+                  applied_changes_count: 1,
+                  issue_count: 0,
+                  error_count: 0,
+                  last_applied_at: '2026-03-23T09:10:00Z',
+                },
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    expect(within(historyPanel).getByText(/^applied$/i)).toBeInTheDocument()
+    expect(within(historyPanel).queryByText(/^needs attention$/i)).not.toBeInTheDocument()
+    expect(within(historyPanel).queryByText(/^draft$/i)).not.toBeInTheDocument()
   })
 
   it('moves the active badge after restoring a different generation', async () => {

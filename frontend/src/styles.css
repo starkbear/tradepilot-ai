@@ -174,10 +174,30 @@ button:disabled {
   align-items: center;
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
-  background: rgba(30, 93, 79, 0.14);
-  color: #1e5d4f;
+  background: rgba(21, 36, 51, 0.08);
+  color: rgba(21, 36, 51, 0.8);
   font-size: 0.82rem;
   font-weight: 700;
+}
+
+.generation-history-badge.is-active {
+  background: rgba(30, 93, 79, 0.14);
+  color: #1e5d4f;
+}
+
+.generation-history-badge.is-draft {
+  background: rgba(21, 36, 51, 0.08);
+  color: rgba(21, 36, 51, 0.8);
+}
+
+.generation-history-badge.is-applied {
+  background: rgba(38, 112, 76, 0.14);
+  color: #26704c;
+}
+
+.generation-history-badge.is-attention {
+  background: rgba(186, 113, 28, 0.16);
+  color: #9b5d13;
 }
 
 .generation-history-actions {
