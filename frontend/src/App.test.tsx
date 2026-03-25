@@ -46,6 +46,64 @@ const RESTORED_ARTIFACT = {
   changes: [],
 }
 
+const CURRENT_COMPARISON_ARTIFACT = {
+  ...GENERATED_ARTIFACT,
+  summary: 'Current comparison artifact.',
+  files: [
+    { path: 'README.md', purpose: 'docs', content: '# Demo', selected: true },
+    { path: 'backend/app/main.py', purpose: 'backend entry', content: 'print("hi")', selected: true },
+  ],
+  changes: [
+    {
+      path: 'backend/app/main.py',
+      mode: 'patch',
+      reason: 'Register router.',
+      old_snippet: 'print("hi")',
+      new_content: 'print("hi")\nprint("router")',
+      selected: true,
+      replace_all_matches: false,
+    },
+    {
+      path: 'frontend/src/App.tsx',
+      mode: 'rewrite',
+      reason: 'Replace app shell.',
+      old_snippet: null,
+      new_content: 'export function App() { return <main /> }',
+      selected: true,
+      replace_all_matches: false,
+    },
+  ],
+}
+
+const HISTORY_COMPARISON_ARTIFACT = {
+  ...GENERATED_ARTIFACT,
+  summary: 'Historical comparison artifact.',
+  files: [
+    { path: 'backend/app/main.py', purpose: 'backend entry', content: 'print("hi")', selected: true },
+    { path: 'frontend/src/dashboard.tsx', purpose: 'dashboard', content: 'export const Dashboard = () => null', selected: true },
+  ],
+  changes: [
+    {
+      path: 'frontend/src/App.tsx',
+      mode: 'rewrite',
+      reason: 'Replace app shell.',
+      old_snippet: null,
+      new_content: 'export function App() { return <section /> }',
+      selected: true,
+      replace_all_matches: false,
+    },
+    {
+      path: 'backend/app/api/routes/dashboard.py',
+      mode: 'rewrite',
+      reason: 'Add dashboard route.',
+      old_snippet: null,
+      new_content: 'router = object()',
+      selected: true,
+      replace_all_matches: false,
+    },
+  ],
+}
+
 const EMPTY_SESSION = {
   display_name: '',
   recent_workspaces: [],
@@ -657,6 +715,122 @@ describe('App', () => {
     expect(preview).toHaveTextContent(/review generated files/i)
   })
 
+  it('shows a comparison summary for non-active generation previews', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: CURRENT_COMPARISON_ARTIFACT,
+            active_generation_id: 'gen-current',
+            generation_history: [
+              {
+                id: 'gen-history',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'Historical comparison entry',
+                summary: 'Historical summary',
+                artifact: HISTORY_COMPARISON_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /preview historical comparison entry/i }))
+
+    const preview = within(historyPanel).getByRole('region', { name: /preview historical comparison entry/i })
+    expect(within(preview).getByText(/compared to current/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/files only in this generation: 1/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/files only in current: 1/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/shared files: 1/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/changes only in this generation: 1/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/changes only in current: 1/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/shared changes: 1/i)).toBeInTheDocument()
+  })
+
+  it('shows an active-generation message instead of a comparison summary', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: CURRENT_COMPARISON_ARTIFACT,
+            active_generation_id: 'gen-active',
+            generation_history: [
+              {
+                id: 'gen-active',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'Active history entry',
+                summary: 'Active summary',
+                artifact: CURRENT_COMPARISON_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /preview active history entry/i }))
+
+    const preview = within(historyPanel).getByRole('region', { name: /preview active history entry/i })
+    expect(within(preview).getByText(/this is the active generation/i)).toBeInTheDocument()
+    expect(within(preview).queryByText(/compared to current/i)).not.toBeInTheDocument()
+  })
+
+  it('hides the comparison summary when there is no active artifact loaded', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: null,
+            active_generation_id: null,
+            generation_history: [
+              {
+                id: 'gen-history',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'History without current artifact',
+                summary: 'Historical summary',
+                artifact: HISTORY_COMPARISON_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /preview history without current artifact/i }))
+
+    const preview = within(historyPanel).getByRole('region', { name: /preview history without current artifact/i })
+    expect(within(preview).queryByText(/compared to current/i)).not.toBeInTheDocument()
+    expect(within(preview).queryByText(/this is the active generation/i)).not.toBeInTheDocument()
+  })
+
   it('keeps only one generation history preview open at a time', async () => {
     const user = userEvent.setup()
     vi.stubGlobal(
@@ -756,8 +930,8 @@ describe('App', () => {
     expect(within(preview).getByText(/apply summary/i)).toBeInTheDocument()
     expect(within(preview).getByText(/validated: 4/i)).toBeInTheDocument()
     expect(within(preview).getByText(/applied: 3/i)).toBeInTheDocument()
-    expect(within(preview).getByText(/files: 2/i)).toBeInTheDocument()
-    expect(within(preview).getByText(/changes: 1/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/^Files: 2$/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/^Changes: 1$/i)).toBeInTheDocument()
     expect(within(preview).getByText(/issues: 1/i)).toBeInTheDocument()
     expect(within(preview).getByText(/errors: 0/i)).toBeInTheDocument()
     expect(within(preview).getByText(/last applied: 2026-03-23 09:10 utc/i)).toBeInTheDocument()
@@ -1832,9 +2006,4 @@ describe('App', () => {
     )
   })
 })
-
-
-
-
-
 

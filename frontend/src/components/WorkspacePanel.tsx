@@ -1,4 +1,4 @@
-import type { GenerationHistoryEntry } from '../lib/types'
+import type { GenerationArtifact, GenerationHistoryEntry } from '../lib/types'
 import { GenerationHistoryPanel } from './GenerationHistoryPanel'
 import { ProviderSetupNotice } from './ProviderSetupNotice'
 
@@ -9,6 +9,7 @@ type WorkspacePanelProps = {
   generationHistory: GenerationHistoryEntry[]
   activeGenerationId: string | null
   expandedGenerationId: string | null
+  currentArtifact?: GenerationArtifact | null
   errorMessage: string | null
   isGenerating: boolean
   isClearingSession?: boolean
@@ -32,6 +33,7 @@ export function WorkspacePanel({
   generationHistory,
   activeGenerationId,
   expandedGenerationId,
+  currentArtifact = null,
   errorMessage,
   isGenerating,
   isClearingSession = false,
@@ -84,6 +86,7 @@ export function WorkspacePanel({
         isRestoring={isRestoringGeneration}
         isManagingHistory={isManagingGenerationHistory}
         expandedGenerationId={expandedGenerationId}
+        currentArtifact={currentArtifact}
         onRestore={onRestoreGeneration}
         onRemove={onDeleteGeneration}
         onClear={onClearGenerationHistory}
@@ -106,3 +109,4 @@ export function WorkspacePanel({
     </section>
   )
 }
+

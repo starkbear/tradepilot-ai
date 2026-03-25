@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import type { GenerationHistoryEntry } from '../lib/types'
+import type { GenerationArtifact, GenerationHistoryEntry } from '../lib/types'
 import { GenerationHistoryEntryPreview } from './GenerationHistoryEntryPreview'
 
 type GenerationHistoryPanelProps = {
@@ -190,6 +190,7 @@ function buildEntryActions({
   entry,
   activeGenerationId,
   expandedGenerationId,
+  currentArtifact = null,
   onRestore,
   onRemove,
   onTogglePreview,
@@ -276,6 +277,7 @@ export function GenerationHistoryPanel({
   isRestoring,
   isManagingHistory,
   expandedGenerationId,
+  currentArtifact = null,
   onRestore,
   onRemove,
   onClear,
@@ -374,7 +376,13 @@ export function GenerationHistoryPanel({
                           </button>
                         ))}
                       </div>
-                      {expandedGenerationId === entry.id ? <GenerationHistoryEntryPreview entry={entry} /> : null}
+                      {expandedGenerationId === entry.id ? (
+                        <GenerationHistoryEntryPreview
+                          entry={entry}
+                          currentArtifact={currentArtifact}
+                          isActive={activeGenerationId === entry.id}
+                        />
+                      ) : null}
                     </li>
                   )
                 })}
@@ -386,3 +394,4 @@ export function GenerationHistoryPanel({
     </section>
   )
 }
+

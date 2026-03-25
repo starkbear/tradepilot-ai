@@ -1,13 +1,48 @@
-import type { GenerationHistoryEntry } from '../lib/types'
+import type { GenerationArtifact, GenerationHistoryEntry } from '../lib/types'
 
 type GenerationHistoryEntryPreviewProps = {
   entry: GenerationHistoryEntry
+  currentArtifact?: GenerationArtifact | null
+  isActive?: boolean
 }
 
-export function GenerationHistoryEntryPreview({ entry }: GenerationHistoryEntryPreviewProps) {
+type ComparisonSummary = {
+  onlyInPreviewFiles: number
+  onlyInCurrentFiles: number
+  sharedFiles: number
+  onlyInPreviewChanges: number
+  onlyInCurrentChanges: number
+  sharedChanges: number
+}
+
+function buildComparisonSummary(previewArtifact: GenerationArtifact, currentArtifact: GenerationArtifact): ComparisonSummary {
+  const previewFiles = new Set(previewArtifact.files.map((file) => file.path))
+  const currentFiles = new Set(currentArtifact.files.map((file) => file.path))
+  const previewChanges = new Set(previewArtifact.changes.map((change) => change.path))
+  const currentChanges = new Set(currentArtifact.changes.map((change) => change.path))
+
+  const sharedFiles = [...previewFiles].filter((path) => currentFiles.has(path)).length
+  const sharedChanges = [...previewChanges].filter((path) => currentChanges.has(path)).length
+
+  return {
+    onlyInPreviewFiles: [...previewFiles].filter((path) => !currentFiles.has(path)).length,
+    onlyInCurrentFiles: [...currentFiles].filter((path) => !previewFiles.has(path)).length,
+    sharedFiles,
+    onlyInPreviewChanges: [...previewChanges].filter((path) => !currentChanges.has(path)).length,
+    onlyInCurrentChanges: [...currentChanges].filter((path) => !previewChanges.has(path)).length,
+    sharedChanges,
+  }
+}
+
+export function GenerationHistoryEntryPreview({
+  entry,
+  currentArtifact = null,
+  isActive = false,
+}: GenerationHistoryEntryPreviewProps) {
   const warningCount = entry.artifact.warnings.length
   const nextStepCount = entry.artifact.next_steps.length
   const applySummary = entry.apply_summary
+  const comparisonSummary = !isActive && currentArtifact ? buildComparisonSummary(entry.artifact, currentArtifact) : null
 
   function formatTimestamp(value: string) {
     return value.replace('T', ' ').slice(0, 16) + ' UTC'
@@ -22,6 +57,24 @@ export function GenerationHistoryEntryPreview({ entry }: GenerationHistoryEntryP
         <li>{`Warnings: ${warningCount}`}</li>
         <li>{`Next Steps: ${nextStepCount}`}</li>
       </ul>
+      {isActive ? (
+        <div className="generation-history-preview-block">
+          <p className="generation-history-preview-label">Current Status</p>
+          <p className="generation-history-preview-note">This is the active generation.</p>
+        </div>
+      ) : comparisonSummary ? (
+        <div className="generation-history-preview-block">
+          <p className="generation-history-preview-label">Compared to Current</p>
+          <ul className="generation-history-preview-list">
+            <li>{`Files Only in This Generation: ${comparisonSummary.onlyInPreviewFiles}`}</li>
+            <li>{`Files Only in Current: ${comparisonSummary.onlyInCurrentFiles}`}</li>
+            <li>{`Shared Files: ${comparisonSummary.sharedFiles}`}</li>
+            <li>{`Changes Only in This Generation: ${comparisonSummary.onlyInPreviewChanges}`}</li>
+            <li>{`Changes Only in Current: ${comparisonSummary.onlyInCurrentChanges}`}</li>
+            <li>{`Shared Changes: ${comparisonSummary.sharedChanges}`}</li>
+          </ul>
+        </div>
+      ) : null}
       {applySummary ? (
         <div className="generation-history-preview-block">
           <p className="generation-history-preview-label">Apply Summary</p>
@@ -59,3 +112,4 @@ export function GenerationHistoryEntryPreview({ entry }: GenerationHistoryEntryP
     </section>
   )
 }
+
