@@ -322,6 +322,7 @@ export default function App() {
             generationHistory={generationHistory}
             activeGenerationId={activeGenerationId}
             expandedGenerationId={expandedGenerationId}
+            currentArtifact={artifact}
             errorMessage={errorMessage}
             isGenerating={isGenerating}
             isClearingSession={isClearingSession}
@@ -362,3 +363,4 @@ export default function App() {
     </main>
   )
 }
+
