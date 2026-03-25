@@ -200,7 +200,7 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: /recent generations/i })).toBeInTheDocument()
     expect(
       within(screen.getByRole('region', { name: /recent generations/i })).getByRole('button', {
-        name: /restore continue refining the trading assistant/i,
+        name: /continue continue refining the trading assistant/i,
       }),
     ).toBeInTheDocument()
   })
@@ -278,7 +278,7 @@ describe('App', () => {
     render(<App />)
 
     expect(await screen.findByRole('heading', { name: /generated plan/i })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /restore restored goal/i }))
+    await user.click(screen.getByRole('button', { name: /continue restored goal/i }))
 
     expect(screen.getByLabelText(/project goal/i)).toHaveValue('Restored goal')
     expect(screen.getByRole('button', { name: 'docs/plan.md' })).toBeInTheDocument()
@@ -337,7 +337,7 @@ describe('App', () => {
     render(<App />)
 
     expect(await screen.findByText(/mvp scaffold ready/i)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /restore broken restore target/i }))
+    await user.click(screen.getByRole('button', { name: /continue broken restore target/i }))
 
     expect(await screen.findByText(/generation history entry not found/i)).toBeInTheDocument()
     expect(screen.getByText(/mvp scaffold ready/i)).toBeInTheDocument()
@@ -408,7 +408,7 @@ describe('App', () => {
     expect(within(historyPanel).getByText(/2 changes/i)).toBeInTheDocument()
   })
 
-  it('shows an active badge and current state for the active generation entry', async () => {
+  it('shows an active badge and preview action for the active generation entry', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(
@@ -439,9 +439,186 @@ describe('App', () => {
     const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
     expect(within(historyPanel).getByText(/active/i)).toBeInTheDocument()
     expect(within(historyPanel).getByText(/^draft$/i, { selector: 'span' })).toBeInTheDocument()
-    expect(within(historyPanel).getByRole('button', { name: /current first history entry/i })).toBeDisabled()
+    expect(within(historyPanel).getByRole('button', { name: /preview first history entry/i })).toBeInTheDocument()
   })
 
+  it('uses preview as the primary action for the active generation entry', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            active_generation_id: 'gen-1',
+            generation_history: [
+              {
+                id: 'gen-1',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'First history entry',
+                summary: 'First summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    expect(within(historyPanel).getByRole('button', { name: /preview first history entry/i })).toBeInTheDocument()
+    expect(within(historyPanel).queryByRole('button', { name: /current first history entry/i })).not.toBeInTheDocument()
+  })
+
+  it('uses review as the primary action for needs-attention entries and opens the preview', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-attention',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'Needs attention entry',
+                summary: 'Attention summary',
+                artifact: GENERATED_ARTIFACT,
+                apply_summary: {
+                  validated_count: 2,
+                  applied_count: 1,
+                  applied_files_count: 1,
+                  applied_changes_count: 0,
+                  issue_count: 1,
+                  error_count: 0,
+                  last_applied_at: '2026-03-23T09:25:00Z',
+                },
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /review needs attention entry/i }))
+
+    expect(within(historyPanel).getByRole('region', { name: /preview needs attention entry/i })).toBeInTheDocument()
+  })
+
+  it('uses continue as the primary action for draft and applied entries', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-draft',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'Draft entry',
+                summary: 'Draft summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+              {
+                id: 'gen-applied',
+                created_at: '2026-03-23T09:10:00Z',
+                goal: 'Applied entry',
+                summary: 'Applied summary',
+                artifact: GENERATED_ARTIFACT,
+                apply_summary: {
+                  validated_count: 3,
+                  applied_count: 3,
+                  applied_files_count: 2,
+                  applied_changes_count: 1,
+                  issue_count: 0,
+                  error_count: 0,
+                  last_applied_at: '2026-03-23T09:20:00Z',
+                },
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: true,
+          body: {
+            success: true,
+            message: 'generation restored',
+            data: buildSessionSnapshot({
+              display_name: 'Wei',
+              screen: 'workspace',
+              workspace_path: 'D:/Codex/Trading assistant',
+              goal: 'Applied entry',
+              artifact: GENERATED_ARTIFACT,
+              active_generation_id: 'gen-applied',
+              generation_history: [
+                {
+                  id: 'gen-draft',
+                  created_at: '2026-03-23T09:00:00Z',
+                  goal: 'Draft entry',
+                  summary: 'Draft summary',
+                  artifact: GENERATED_ARTIFACT,
+                },
+                {
+                  id: 'gen-applied',
+                  created_at: '2026-03-23T09:10:00Z',
+                  goal: 'Applied entry',
+                  summary: 'Applied summary',
+                  artifact: GENERATED_ARTIFACT,
+                  apply_summary: {
+                    validated_count: 3,
+                    applied_count: 3,
+                    applied_files_count: 2,
+                    applied_changes_count: 1,
+                    issue_count: 0,
+                    error_count: 0,
+                    last_applied_at: '2026-03-23T09:20:00Z',
+                  },
+                },
+              ],
+            }),
+            errors: [],
+          },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    expect(within(historyPanel).getByRole('button', { name: /continue draft entry/i })).toBeInTheDocument()
+    expect(within(historyPanel).getByRole('button', { name: /continue applied entry/i })).toBeInTheDocument()
+
+    await user.click(within(historyPanel).getByRole('button', { name: /continue applied entry/i }))
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/session/restore-generation',
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    )
+  })
   it('expands a generation history preview when requested', async () => {
     const user = userEvent.setup()
     vi.stubGlobal(
@@ -573,9 +750,9 @@ describe('App', () => {
     ).toBeInTheDocument()
     expect(within(historyPanel).getByText(/1 issues/i)).toBeInTheDocument()
 
-    await user.click(within(historyPanel).getByRole('button', { name: /preview applied history entry/i }))
+    await user.click(within(historyPanel).getByRole('button', { name: /review applied history entry/i }))
 
-    const preview = within(historyPanel).getByRole('region', { name: /preview applied history entry/i })
+    const preview = within(historyPanel).getByRole('region', { name: /review applied history entry/i })
     expect(within(preview).getByText(/apply summary/i)).toBeInTheDocument()
     expect(within(preview).getByText(/validated: 4/i)).toBeInTheDocument()
     expect(within(preview).getByText(/applied: 3/i)).toBeInTheDocument()
@@ -928,10 +1105,10 @@ describe('App', () => {
     render(<App />)
 
     const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
-    await user.click(within(historyPanel).getByRole('button', { name: /restore second history entry/i }))
+    await user.click(within(historyPanel).getByRole('button', { name: /continue second history entry/i }))
 
-    const currentButton = within(historyPanel).getByRole('button', { name: /current second history entry/i })
-    expect(currentButton).toBeDisabled()
+    const currentButton = within(historyPanel).getByRole('button', { name: /preview second history entry/i })
+    expect(currentButton).toBeInTheDocument()
     expect(within(historyPanel).getByText(/active/i)).toBeInTheDocument()
   })
 
@@ -1138,7 +1315,7 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.queryByText(/first history entry/i)).not.toBeInTheDocument()
     })
-    expect(screen.getByRole('button', { name: /current second history entry/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /preview second history entry/i })).toBeInTheDocument()
   })
 
   it('clears generation history and hides the history panel', async () => {
@@ -1655,6 +1832,9 @@ describe('App', () => {
     )
   })
 })
+
+
+
 
 
 

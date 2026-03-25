@@ -32,6 +32,14 @@ type HistoryFilterOption = {
   label: string
 }
 
+type EntryAction = {
+  key: string
+  label: string
+  ariaLabel: string
+  onClick: () => void
+  isPrimary?: boolean
+}
+
 const FILTER_OPTIONS: HistoryFilterOption[] = [
   { value: 'all', label: 'All' },
   { value: 'focus', label: 'Focus' },
@@ -178,6 +186,90 @@ function getEmptyStateCopy(filter: Exclude<HistoryFilter, 'all'>) {
   return 'No applied generations yet.'
 }
 
+function buildEntryActions({
+  entry,
+  activeGenerationId,
+  expandedGenerationId,
+  onRestore,
+  onRemove,
+  onTogglePreview,
+}: {
+  entry: GenerationHistoryEntry
+  activeGenerationId: string | null
+  expandedGenerationId: string | null
+  onRestore: (generationId: string) => void
+  onRemove: (generationId: string) => void
+  onTogglePreview: (generationId: string) => void
+}): EntryAction[] {
+  const lifecycleLabel = getLifecycleBadge(entry).label
+  const isActive = entry.id === activeGenerationId
+  const isExpanded = expandedGenerationId === entry.id
+
+  if (isActive) {
+    return [
+      {
+        key: 'preview',
+        label: isExpanded ? 'Hide Preview' : 'Preview',
+        ariaLabel: `${isExpanded ? 'Hide Preview' : 'Preview'} ${entry.goal}`,
+        onClick: () => onTogglePreview(entry.id),
+        isPrimary: true,
+      },
+      {
+        key: 'remove',
+        label: 'Remove',
+        ariaLabel: `Remove ${entry.goal}`,
+        onClick: () => onRemove(entry.id),
+      },
+    ]
+  }
+
+  if (lifecycleLabel === 'Needs Attention') {
+    return [
+      {
+        key: 'review',
+        label: 'Review',
+        ariaLabel: `Review ${entry.goal}`,
+        onClick: () => onTogglePreview(entry.id),
+        isPrimary: true,
+      },
+      {
+        key: 'restore',
+        label: 'Restore',
+        ariaLabel: `Restore ${entry.goal}`,
+        onClick: () => onRestore(entry.id),
+      },
+      {
+        key: 'remove',
+        label: 'Remove',
+        ariaLabel: `Remove ${entry.goal}`,
+        onClick: () => onRemove(entry.id),
+      },
+    ]
+  }
+
+  return [
+    {
+      key: 'continue',
+      label: 'Continue',
+      ariaLabel: `Continue ${entry.goal}`,
+      onClick: () => onRestore(entry.id),
+      isPrimary: true,
+    },
+    {
+      key: 'preview',
+      label: isExpanded ? 'Hide Preview' : 'Preview',
+      ariaLabel: `${isExpanded ? 'Hide Preview' : 'Preview'} ${entry.goal}`,
+      onClick: () => onTogglePreview(entry.id),
+    },
+    {
+      key: 'remove',
+      label: 'Remove',
+      ariaLabel: `Remove ${entry.goal}`,
+      onClick: () => onRemove(entry.id),
+    },
+  ]
+}
+
 export function GenerationHistoryPanel({
   entries,
   activeGenerationId,
@@ -233,6 +325,14 @@ export function GenerationHistoryPanel({
               <ul className="generation-history-list">
                 {section.entries.map((entry) => {
                   const lifecycleBadge = getLifecycleBadge(entry)
+                  const actions = buildEntryActions({
+                    entry,
+                    activeGenerationId,
+                    expandedGenerationId,
+                    onRestore,
+                    onRemove,
+                    onTogglePreview,
+                  })
 
                   return (
                     <li
@@ -261,33 +361,18 @@ export function GenerationHistoryPanel({
                         ))}
                       </div>
                       <div className="generation-history-actions">
-                        <button
-                          type="button"
-                          className="secondary-button"
-                          aria-label={`${expandedGenerationId === entry.id ? 'Hide Preview' : 'Preview'} ${entry.goal}`}
-                          disabled={isBusy}
-                          onClick={() => onTogglePreview(entry.id)}
-                        >
-                          {expandedGenerationId === entry.id ? 'Hide Preview' : 'Preview'}
-                        </button>
-                        <button
-                          type="button"
-                          className="secondary-button"
-                          aria-label={`${activeGenerationId === entry.id ? 'Current' : 'Restore'} ${entry.goal}`}
-                          disabled={isBusy || activeGenerationId === entry.id}
-                          onClick={() => onRestore(entry.id)}
-                        >
-                          {activeGenerationId === entry.id ? 'Current' : isRestoring ? 'Restoring...' : 'Restore'}
-                        </button>
-                        <button
-                          type="button"
-                          className="secondary-button"
-                          aria-label={`Remove ${entry.goal}`}
-                          disabled={isBusy}
-                          onClick={() => onRemove(entry.id)}
-                        >
-                          {isManagingHistory ? 'Removing...' : 'Remove'}
-                        </button>
+                        {actions.map((action) => (
+                          <button
+                            key={action.key}
+                            type="button"
+                            className={action.isPrimary ? 'generation-history-primary-action' : 'secondary-button'}
+                            aria-label={action.ariaLabel}
+                            disabled={isBusy}
+                            onClick={action.onClick}
+                          >
+                            {action.label}
+                          </button>
+                        ))}
                       </div>
                       {expandedGenerationId === entry.id ? <GenerationHistoryEntryPreview entry={entry} /> : null}
                     </li>
