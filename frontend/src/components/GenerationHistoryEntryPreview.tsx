@@ -13,6 +13,21 @@ type ComparisonSummary = {
   onlyInPreviewChanges: number
   onlyInCurrentChanges: number
   sharedChanges: number
+  onlyInPreviewFilesPaths: string[]
+  onlyInCurrentFilesPaths: string[]
+  onlyInPreviewChangesPaths: string[]
+  onlyInCurrentChangesPaths: string[]
+}
+
+type ComparisonDetailList = {
+  label: string
+  paths: string[]
+}
+
+const DETAIL_PATH_LIMIT = 3
+
+function sortedDifference(source: Set<string>, target: Set<string>) {
+  return [...source].filter((path) => !target.has(path)).sort((left, right) => left.localeCompare(right))
 }
 
 function buildComparisonSummary(previewArtifact: GenerationArtifact, currentArtifact: GenerationArtifact): ComparisonSummary {
@@ -21,16 +36,41 @@ function buildComparisonSummary(previewArtifact: GenerationArtifact, currentArti
   const previewChanges = new Set(previewArtifact.changes.map((change) => change.path))
   const currentChanges = new Set(currentArtifact.changes.map((change) => change.path))
 
+  const onlyInPreviewFilesPaths = sortedDifference(previewFiles, currentFiles)
+  const onlyInCurrentFilesPaths = sortedDifference(currentFiles, previewFiles)
+  const onlyInPreviewChangesPaths = sortedDifference(previewChanges, currentChanges)
+  const onlyInCurrentChangesPaths = sortedDifference(currentChanges, previewChanges)
+
   const sharedFiles = [...previewFiles].filter((path) => currentFiles.has(path)).length
   const sharedChanges = [...previewChanges].filter((path) => currentChanges.has(path)).length
 
   return {
-    onlyInPreviewFiles: [...previewFiles].filter((path) => !currentFiles.has(path)).length,
-    onlyInCurrentFiles: [...currentFiles].filter((path) => !previewFiles.has(path)).length,
+    onlyInPreviewFiles: onlyInPreviewFilesPaths.length,
+    onlyInCurrentFiles: onlyInCurrentFilesPaths.length,
     sharedFiles,
-    onlyInPreviewChanges: [...previewChanges].filter((path) => !currentChanges.has(path)).length,
-    onlyInCurrentChanges: [...currentChanges].filter((path) => !previewChanges.has(path)).length,
+    onlyInPreviewChanges: onlyInPreviewChangesPaths.length,
+    onlyInCurrentChanges: onlyInCurrentChangesPaths.length,
     sharedChanges,
+    onlyInPreviewFilesPaths,
+    onlyInCurrentFilesPaths,
+    onlyInPreviewChangesPaths,
+    onlyInCurrentChangesPaths,
+  }
+}
+
+function buildComparisonDetails(summary: ComparisonSummary): ComparisonDetailList[] {
+  return [
+    { label: 'Files only in this generation', paths: summary.onlyInPreviewFilesPaths },
+    { label: 'Files only in current', paths: summary.onlyInCurrentFilesPaths },
+    { label: 'Changes only in this generation', paths: summary.onlyInPreviewChangesPaths },
+    { label: 'Changes only in current', paths: summary.onlyInCurrentChangesPaths },
+  ].filter((detail) => detail.paths.length > 0)
+}
+
+function getVisiblePaths(paths: string[]) {
+  return {
+    displayPaths: paths.slice(0, DETAIL_PATH_LIMIT),
+    hiddenCount: Math.max(paths.length - DETAIL_PATH_LIMIT, 0),
   }
 }
 
@@ -43,6 +83,7 @@ export function GenerationHistoryEntryPreview({
   const nextStepCount = entry.artifact.next_steps.length
   const applySummary = entry.apply_summary
   const comparisonSummary = !isActive && currentArtifact ? buildComparisonSummary(entry.artifact, currentArtifact) : null
+  const comparisonDetails = comparisonSummary ? buildComparisonDetails(comparisonSummary) : []
 
   function formatTimestamp(value: string) {
     return value.replace('T', ' ').slice(0, 16) + ' UTC'
@@ -73,6 +114,21 @@ export function GenerationHistoryEntryPreview({
             <li>{`Changes Only in Current: ${comparisonSummary.onlyInCurrentChanges}`}</li>
             <li>{`Shared Changes: ${comparisonSummary.sharedChanges}`}</li>
           </ul>
+          {comparisonDetails.map((detail) => {
+            const { displayPaths, hiddenCount } = getVisiblePaths(detail.paths)
+
+            return (
+              <div key={detail.label} className="generation-history-preview-block">
+                <p className="generation-history-preview-label">{detail.label}</p>
+                <ul className="generation-history-preview-list">
+                  {displayPaths.map((path) => (
+                    <li key={path}>{path}</li>
+                  ))}
+                  {hiddenCount > 0 ? <li>{`+${hiddenCount} more`}</li> : null}
+                </ul>
+              </div>
+            )
+          })}
         </div>
       ) : null}
       {applySummary ? (
@@ -112,4 +168,3 @@ export function GenerationHistoryEntryPreview({
     </section>
   )
 }
-
