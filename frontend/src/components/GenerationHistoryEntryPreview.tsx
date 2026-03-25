@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import type { GenerationArtifact, GenerationHistoryEntry } from '../lib/types'
 
 type GenerationHistoryEntryPreviewProps = {
@@ -20,9 +22,16 @@ type ComparisonSummary = {
 }
 
 type ComparisonDetailList = {
+  key: string
   label: string
   paths: string[]
 }
+
+type CopyState = {
+  key: string
+  status: 'success' | 'error'
+  count: number
+} | null
 
 const DETAIL_PATH_LIMIT = 3
 
@@ -60,10 +69,10 @@ function buildComparisonSummary(previewArtifact: GenerationArtifact, currentArti
 
 function buildComparisonDetails(summary: ComparisonSummary): ComparisonDetailList[] {
   return [
-    { label: 'Files only in this generation', paths: summary.onlyInPreviewFilesPaths },
-    { label: 'Files only in current', paths: summary.onlyInCurrentFilesPaths },
-    { label: 'Changes only in this generation', paths: summary.onlyInPreviewChangesPaths },
-    { label: 'Changes only in current', paths: summary.onlyInCurrentChangesPaths },
+    { key: 'preview-files', label: 'Files only in this generation', paths: summary.onlyInPreviewFilesPaths },
+    { key: 'current-files', label: 'Files only in current', paths: summary.onlyInCurrentFilesPaths },
+    { key: 'preview-changes', label: 'Changes only in this generation', paths: summary.onlyInPreviewChangesPaths },
+    { key: 'current-changes', label: 'Changes only in current', paths: summary.onlyInCurrentChangesPaths },
   ].filter((detail) => detail.paths.length > 0)
 }
 
@@ -79,6 +88,7 @@ export function GenerationHistoryEntryPreview({
   currentArtifact = null,
   isActive = false,
 }: GenerationHistoryEntryPreviewProps) {
+  const [copyState, setCopyState] = useState<CopyState>(null)
   const warningCount = entry.artifact.warnings.length
   const nextStepCount = entry.artifact.next_steps.length
   const applySummary = entry.apply_summary
@@ -87,6 +97,15 @@ export function GenerationHistoryEntryPreview({
 
   function formatTimestamp(value: string) {
     return value.replace('T', ' ').slice(0, 16) + ' UTC'
+  }
+
+  async function handleCopyPaths(detail: ComparisonDetailList) {
+    try {
+      await navigator.clipboard.writeText(detail.paths.join('\n'))
+      setCopyState({ key: detail.key, status: 'success', count: detail.paths.length })
+    } catch {
+      setCopyState({ key: detail.key, status: 'error', count: detail.paths.length })
+    }
   }
 
   return (
@@ -116,16 +135,28 @@ export function GenerationHistoryEntryPreview({
           </ul>
           {comparisonDetails.map((detail) => {
             const { displayPaths, hiddenCount } = getVisiblePaths(detail.paths)
+            const detailCopyState = copyState?.key === detail.key ? copyState : null
 
             return (
-              <div key={detail.label} className="generation-history-preview-block">
-                <p className="generation-history-preview-label">{detail.label}</p>
+              <div key={detail.key} className="generation-history-preview-block">
+                <div className="generation-history-header">
+                  <p className="generation-history-preview-label">{detail.label}</p>
+                  <button type="button" className="secondary-button" onClick={() => handleCopyPaths(detail)}>
+                    Copy Paths
+                  </button>
+                </div>
                 <ul className="generation-history-preview-list">
                   {displayPaths.map((path) => (
                     <li key={path}>{path}</li>
                   ))}
                   {hiddenCount > 0 ? <li>{`+${hiddenCount} more`}</li> : null}
                 </ul>
+                {detailCopyState?.status === 'success' ? (
+                  <p className="generation-history-preview-note">{`Copied ${detailCopyState.count} paths`}</p>
+                ) : null}
+                {detailCopyState?.status === 'error' ? (
+                  <p className="generation-history-preview-note">Copy failed</p>
+                ) : null}
               </div>
             )
           })}
