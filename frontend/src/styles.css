@@ -249,6 +249,18 @@ button:disabled {
   gap: 0.55rem;
 }
 
+.generation-history-primary-action {
+  border: none;
+  background: linear-gradient(135deg, #1e5d4f, #26704c);
+  color: #f5f1e8;
+  box-shadow: 0 10px 24px rgba(30, 93, 79, 0.22);
+}
+
+.generation-history-primary-action:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(30, 93, 79, 0.26);
+}
+
 .generation-history-preview {
   display: grid;
   gap: 0.55rem;
@@ -467,5 +479,7 @@ button:disabled {
     max-width: none;
   }
 }
+
+
 
 
