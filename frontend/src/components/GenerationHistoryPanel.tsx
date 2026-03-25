@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import type { GenerationHistoryEntry } from '../lib/types'
 import { GenerationHistoryEntryPreview } from './GenerationHistoryEntryPreview'
 
@@ -19,9 +21,24 @@ type HistoryBadge = {
 }
 
 type HistorySection = {
-  label: 'Focus Now' | 'Recent History'
+  label: string
   entries: GenerationHistoryEntry[]
 }
+
+type HistoryFilter = 'all' | 'focus' | 'attention' | 'draft' | 'applied'
+
+type HistoryFilterOption = {
+  value: HistoryFilter
+  label: string
+}
+
+const FILTER_OPTIONS: HistoryFilterOption[] = [
+  { value: 'all', label: 'All' },
+  { value: 'focus', label: 'Focus' },
+  { value: 'attention', label: 'Needs Attention' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'applied', label: 'Applied' },
+]
 
 function formatSavedAt(createdAt: string) {
   return createdAt.replace('T', ' ').slice(0, 16) + ' UTC'
@@ -97,7 +114,7 @@ function sortEntries(entries: GenerationHistoryEntry[], activeGenerationId: stri
   })
 }
 
-function buildSections(entries: GenerationHistoryEntry[], activeGenerationId: string | null): HistorySection[] {
+function buildAllSections(entries: GenerationHistoryEntry[], activeGenerationId: string | null): HistorySection[] {
   const sortedEntries = sortEntries(entries, activeGenerationId)
   const focusEntries = sortedEntries.filter((entry) => {
     const lifecycleBadge = getLifecycleBadge(entry)
@@ -117,6 +134,50 @@ function buildSections(entries: GenerationHistoryEntry[], activeGenerationId: st
   return sections
 }
 
+function buildFilteredSection(
+  entries: GenerationHistoryEntry[],
+  activeGenerationId: string | null,
+  filter: Exclude<HistoryFilter, 'all'>,
+): HistorySection {
+  const sortedEntries = sortEntries(entries, activeGenerationId)
+  const filteredEntries = sortedEntries.filter((entry) => {
+    const lifecycleLabel = getLifecycleBadge(entry).label
+
+    if (filter === 'focus') {
+      return entry.id === activeGenerationId || lifecycleLabel === 'Needs Attention'
+    }
+
+    if (filter === 'attention') {
+      return lifecycleLabel === 'Needs Attention'
+    }
+
+    if (filter === 'draft') {
+      return lifecycleLabel === 'Draft'
+    }
+
+    return lifecycleLabel === 'Applied'
+  })
+
+  const label = FILTER_OPTIONS.find((option) => option.value === filter)?.label ?? 'Filtered History'
+  return { label, entries: filteredEntries }
+}
+
+function getEmptyStateCopy(filter: Exclude<HistoryFilter, 'all'>) {
+  if (filter === 'focus') {
+    return 'No focus generations right now.'
+  }
+
+  if (filter === 'attention') {
+    return 'No generations need attention right now.'
+  }
+
+  if (filter === 'draft') {
+    return 'No draft generations yet.'
+  }
+
+  return 'No applied generations yet.'
+}
+
 export function GenerationHistoryPanel({
   entries,
   activeGenerationId,
@@ -128,12 +189,17 @@ export function GenerationHistoryPanel({
   onClear,
   onTogglePreview,
 }: GenerationHistoryPanelProps) {
+  const [filter, setFilter] = useState<HistoryFilter>('all')
+
   if (entries.length === 0) {
     return null
   }
 
   const isBusy = isRestoring || isManagingHistory
-  const sections = buildSections(entries, activeGenerationId)
+  const sections =
+    filter === 'all'
+      ? buildAllSections(entries, activeGenerationId)
+      : [buildFilteredSection(entries, activeGenerationId, filter)]
 
   return (
     <section className="generation-history" aria-label="Recent generations">
@@ -143,78 +209,92 @@ export function GenerationHistoryPanel({
           {isManagingHistory ? 'Clearing...' : 'Clear History'}
         </button>
       </div>
+      <div className="generation-history-filters" aria-label="Generation history filters">
+        {FILTER_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={`generation-history-filter${filter === option.value ? ' is-selected' : ''}`}
+            aria-pressed={filter === option.value}
+            disabled={isBusy}
+            onClick={() => setFilter(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
       <div className="generation-history-groups">
         {sections.map((section) => (
-          <section
-            key={section.label}
-            className="generation-history-group"
-            aria-label={section.label}
-          >
+          <section key={section.label} className="generation-history-group" aria-label={section.label}>
             <h3 className="generation-history-group-title">{section.label}</h3>
-            <ul className="generation-history-list">
-              {section.entries.map((entry) => {
-                const lifecycleBadge = getLifecycleBadge(entry)
+            {section.entries.length === 0 ? (
+              <p className="generation-history-empty">{getEmptyStateCopy(filter as Exclude<HistoryFilter, 'all'>)}</p>
+            ) : (
+              <ul className="generation-history-list">
+                {section.entries.map((entry) => {
+                  const lifecycleBadge = getLifecycleBadge(entry)
 
-                return (
-                  <li
-                    key={entry.id}
-                    className={`generation-history-item${activeGenerationId === entry.id ? ' is-active' : ''}`}
-                  >
-                    <div className="generation-history-copy">
-                      <div className="generation-history-title-row">
-                        <p className="generation-history-goal">{entry.goal}</p>
-                        {activeGenerationId === entry.id ? (
-                          <span className="generation-history-badge is-active">Active</span>
-                        ) : null}
-                        <span className={`generation-history-badge ${lifecycleBadge.className}`}>
-                          {lifecycleBadge.label}
-                        </span>
-                      </div>
-                      <p className="generation-history-meta">{`Saved ${formatSavedAt(entry.created_at)}`}</p>
-                      <p className="generation-history-summary">{entry.summary}</p>
-                      <p className="generation-history-meta">
-                        {`${entry.artifact.files.length} files / ${entry.artifact.changes.length} changes`}
-                      </p>
-                      {buildApplySummary(entry)?.map((line) => (
-                        <p key={`${entry.id}-${line}`} className="generation-history-meta">
-                          {line}
+                  return (
+                    <li
+                      key={entry.id}
+                      className={`generation-history-item${activeGenerationId === entry.id ? ' is-active' : ''}`}
+                    >
+                      <div className="generation-history-copy">
+                        <div className="generation-history-title-row">
+                          <p className="generation-history-goal">{entry.goal}</p>
+                          {activeGenerationId === entry.id ? (
+                            <span className="generation-history-badge is-active">Active</span>
+                          ) : null}
+                          <span className={`generation-history-badge ${lifecycleBadge.className}`}>
+                            {lifecycleBadge.label}
+                          </span>
+                        </div>
+                        <p className="generation-history-meta">{`Saved ${formatSavedAt(entry.created_at)}`}</p>
+                        <p className="generation-history-summary">{entry.summary}</p>
+                        <p className="generation-history-meta">
+                          {`${entry.artifact.files.length} files / ${entry.artifact.changes.length} changes`}
                         </p>
-                      ))}
-                    </div>
-                    <div className="generation-history-actions">
-                      <button
-                        type="button"
-                        className="secondary-button"
-                        aria-label={`${expandedGenerationId === entry.id ? 'Hide Preview' : 'Preview'} ${entry.goal}`}
-                        disabled={isBusy}
-                        onClick={() => onTogglePreview(entry.id)}
-                      >
-                        {expandedGenerationId === entry.id ? 'Hide Preview' : 'Preview'}
-                      </button>
-                      <button
-                        type="button"
-                        className="secondary-button"
-                        aria-label={`${activeGenerationId === entry.id ? 'Current' : 'Restore'} ${entry.goal}`}
-                        disabled={isBusy || activeGenerationId === entry.id}
-                        onClick={() => onRestore(entry.id)}
-                      >
-                        {activeGenerationId === entry.id ? 'Current' : isRestoring ? 'Restoring...' : 'Restore'}
-                      </button>
-                      <button
-                        type="button"
-                        className="secondary-button"
-                        aria-label={`Remove ${entry.goal}`}
-                        disabled={isBusy}
-                        onClick={() => onRemove(entry.id)}
-                      >
-                        {isManagingHistory ? 'Removing...' : 'Remove'}
-                      </button>
-                    </div>
-                    {expandedGenerationId === entry.id ? <GenerationHistoryEntryPreview entry={entry} /> : null}
-                  </li>
-                )
-              })}
-            </ul>
+                        {buildApplySummary(entry)?.map((line) => (
+                          <p key={`${entry.id}-${line}`} className="generation-history-meta">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                      <div className="generation-history-actions">
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          aria-label={`${expandedGenerationId === entry.id ? 'Hide Preview' : 'Preview'} ${entry.goal}`}
+                          disabled={isBusy}
+                          onClick={() => onTogglePreview(entry.id)}
+                        >
+                          {expandedGenerationId === entry.id ? 'Hide Preview' : 'Preview'}
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          aria-label={`${activeGenerationId === entry.id ? 'Current' : 'Restore'} ${entry.goal}`}
+                          disabled={isBusy || activeGenerationId === entry.id}
+                          onClick={() => onRestore(entry.id)}
+                        >
+                          {activeGenerationId === entry.id ? 'Current' : isRestoring ? 'Restoring...' : 'Restore'}
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          aria-label={`Remove ${entry.goal}`}
+                          disabled={isBusy}
+                          onClick={() => onRemove(entry.id)}
+                        >
+                          {isManagingHistory ? 'Removing...' : 'Remove'}
+                        </button>
+                      </div>
+                      {expandedGenerationId === entry.id ? <GenerationHistoryEntryPreview entry={entry} /> : null}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
           </section>
         ))}
       </div>

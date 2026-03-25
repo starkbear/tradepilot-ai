@@ -438,7 +438,7 @@ describe('App', () => {
 
     const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
     expect(within(historyPanel).getByText(/active/i)).toBeInTheDocument()
-    expect(within(historyPanel).getByText(/^draft$/i)).toBeInTheDocument()
+    expect(within(historyPanel).getByText(/^draft$/i, { selector: 'span' })).toBeInTheDocument()
     expect(within(historyPanel).getByRole('button', { name: /current first history entry/i })).toBeDisabled()
   })
 
@@ -566,7 +566,7 @@ describe('App', () => {
     render(<App />)
 
     const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
-    expect(within(historyPanel).getByText(/^needs attention$/i)).toBeInTheDocument()
+    expect(within(historyPanel).getByText(/^needs attention$/i, { selector: 'span' })).toBeInTheDocument()
     expect(within(historyPanel).getByText(/applied 3 items/i)).toBeInTheDocument()
     expect(
       within(historyPanel).getByText((content) => content.includes('2 files') && content.includes('1 changes')),
@@ -623,9 +623,9 @@ describe('App', () => {
     render(<App />)
 
     const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
-    expect(within(historyPanel).getByText(/^applied$/i)).toBeInTheDocument()
-    expect(within(historyPanel).queryByText(/^needs attention$/i)).not.toBeInTheDocument()
-    expect(within(historyPanel).queryByText(/^draft$/i)).not.toBeInTheDocument()
+    expect(within(historyPanel).getByText(/^applied$/i, { selector: 'span' })).toBeInTheDocument()
+    expect(within(historyPanel).queryByText(/^needs attention$/i, { selector: 'span' })).not.toBeInTheDocument()
+    expect(within(historyPanel).queryByText(/^draft$/i, { selector: 'span' })).not.toBeInTheDocument()
   })
 
   it('groups focus items ahead of recent history and sorts recent items by priority and recency', async () => {
@@ -719,6 +719,138 @@ describe('App', () => {
     expect(recentItems[0]).toHaveTextContent(/newer draft entry/i)
     expect(recentItems[1]).toHaveTextContent(/older draft entry/i)
     expect(recentItems[2]).toHaveTextContent(/applied history entry/i)
+  })
+  it('filters history entries by focus and lifecycle state', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            active_generation_id: 'gen-active',
+            generation_history: [
+              {
+                id: 'gen-applied',
+                created_at: '2026-03-23T09:40:00Z',
+                goal: 'Applied history entry',
+                summary: 'Applied summary',
+                artifact: GENERATED_ARTIFACT,
+                apply_summary: {
+                  validated_count: 2,
+                  applied_count: 2,
+                  applied_files_count: 1,
+                  applied_changes_count: 1,
+                  issue_count: 0,
+                  error_count: 0,
+                  last_applied_at: '2026-03-23T09:45:00Z',
+                },
+              },
+              {
+                id: 'gen-attention',
+                created_at: '2026-03-23T09:20:00Z',
+                goal: 'Needs attention entry',
+                summary: 'Attention summary',
+                artifact: GENERATED_ARTIFACT,
+                apply_summary: {
+                  validated_count: 2,
+                  applied_count: 1,
+                  applied_files_count: 1,
+                  applied_changes_count: 0,
+                  issue_count: 1,
+                  error_count: 0,
+                  last_applied_at: '2026-03-23T09:25:00Z',
+                },
+              },
+              {
+                id: 'gen-draft',
+                created_at: '2026-03-23T09:30:00Z',
+                goal: 'Draft history entry',
+                summary: 'Draft summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+              {
+                id: 'gen-active',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'Active entry',
+                summary: 'Active summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    const allFilter = within(historyPanel).getByRole('button', { name: /^all$/i })
+    expect(allFilter).toHaveAttribute('aria-pressed', 'true')
+    expect(within(historyPanel).getByRole('region', { name: /focus now/i })).toBeInTheDocument()
+    expect(within(historyPanel).getByRole('region', { name: /recent history/i })).toBeInTheDocument()
+
+    await user.click(within(historyPanel).getByRole('button', { name: /^focus$/i }))
+    const focusRegion = within(historyPanel).getByRole('region', { name: /^focus$/i })
+    expect(within(focusRegion).getByText(/active entry/i)).toBeInTheDocument()
+    expect(within(focusRegion).getByText(/needs attention entry/i)).toBeInTheDocument()
+    expect(within(focusRegion).queryByText(/applied history entry/i)).not.toBeInTheDocument()
+    expect(within(focusRegion).queryByText(/draft history entry/i)).not.toBeInTheDocument()
+
+    await user.click(within(historyPanel).getByRole('button', { name: /^applied$/i }))
+    const appliedRegion = within(historyPanel).getByRole('region', { name: /^applied$/i })
+    expect(within(appliedRegion).getByText(/applied history entry/i)).toBeInTheDocument()
+    expect(within(appliedRegion).queryByText(/needs attention entry/i)).not.toBeInTheDocument()
+
+    await user.click(within(historyPanel).getByRole('button', { name: /^draft$/i }))
+    const draftRegion = within(historyPanel).getByRole('region', { name: /^draft$/i })
+    expect(within(draftRegion).getByText(/draft history entry/i)).toBeInTheDocument()
+    expect(within(draftRegion).queryByText(/applied history entry/i)).not.toBeInTheDocument()
+
+    await user.click(within(historyPanel).getByRole('button', { name: /^needs attention$/i }))
+    const attentionRegion = within(historyPanel).getByRole('region', { name: /^needs attention$/i })
+    expect(within(attentionRegion).getByText(/needs attention entry/i)).toBeInTheDocument()
+    expect(within(attentionRegion).queryByText(/active entry/i)).not.toBeInTheDocument()
+  })
+
+  it('shows an empty-state message when a selected history filter has no matches', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-draft-only',
+                created_at: '2026-03-23T09:30:00Z',
+                goal: 'Only draft entry',
+                summary: 'Draft summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /^applied$/i }))
+
+    const appliedRegion = within(historyPanel).getByRole('region', { name: /^applied$/i })
+    expect(within(appliedRegion).getByText(/no applied generations yet/i)).toBeInTheDocument()
+    expect(within(appliedRegion).queryByText(/only draft entry/i)).not.toBeInTheDocument()
   })
   it('moves the active badge after restoring a different generation', async () => {
     const user = userEvent.setup()
@@ -1523,4 +1655,6 @@ describe('App', () => {
     )
   })
 })
+
+
 

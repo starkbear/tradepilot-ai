@@ -129,6 +129,23 @@ button:disabled {
   gap: 0.75rem;
 }
 
+.generation-history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.generation-history-filter {
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(21, 36, 51, 0.08);
+  color: #152433;
+}
+
+.generation-history-filter.is-selected {
+  background: rgba(30, 93, 79, 0.14);
+  color: #1e5d4f;
+}
 .generation-history-list {
   display: grid;
   gap: 0.7rem;
@@ -155,7 +172,15 @@ button:disabled {
   text-transform: uppercase;
   color: rgba(21, 36, 51, 0.66);
 }
-.generation-history-item {
+
+.generation-history-empty {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border: 1px dashed rgba(21, 36, 51, 0.18);
+  border-radius: 1rem;
+  background: rgba(21, 36, 51, 0.03);
+  color: rgba(21, 36, 51, 0.7);
+}.generation-history-item {
   display: grid;
   gap: 0.7rem;
   padding: 0.9rem 1rem;
@@ -442,4 +467,5 @@ button:disabled {
     max-width: none;
   }
 }
+
 
