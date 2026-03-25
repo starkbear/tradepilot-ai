@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
 
 import type { GenerationArtifact, GenerationHistoryEntry } from '../lib/types'
 import { GenerationHistoryEntryPreview } from './GenerationHistoryEntryPreview'
@@ -28,107 +29,39 @@ function createEntry(overrides: Partial<GenerationHistoryEntry> = {}): Generatio
   }
 }
 
-describe('GenerationHistoryEntryPreview', () => {
-  it('renders path detail lists and overflow messaging for comparison differences', () => {
-    const entry = createEntry({
-      artifact: createArtifact({
-        files: [
-          { path: 'backend/api.py', purpose: 'api', content: '', selected: true },
-          { path: 'backend/main.py', purpose: 'main', content: '', selected: true },
-          { path: 'docs/plan.md', purpose: 'docs', content: '', selected: true },
-          { path: 'frontend/App.tsx', purpose: 'app', content: '', selected: true },
-          { path: 'shared/config.json', purpose: 'shared', content: '', selected: true },
-        ],
-        changes: [
-          {
-            path: 'backend/routes.py',
-            mode: 'patch',
-            reason: 'routes',
-            old_snippet: 'old',
-            new_content: 'new',
-            selected: true,
-            replace_all_matches: false,
-          },
-          {
-            path: 'backend/settings.py',
-            mode: 'patch',
-            reason: 'settings',
-            old_snippet: 'old',
-            new_content: 'new',
-            selected: true,
-            replace_all_matches: false,
-          },
-          {
-            path: 'frontend/dashboard.tsx',
-            mode: 'rewrite',
-            reason: 'dashboard',
-            old_snippet: null,
-            new_content: 'new',
-            selected: true,
-            replace_all_matches: false,
-          },
-          {
-            path: 'shared/theme.ts',
-            mode: 'rewrite',
-            reason: 'theme',
-            old_snippet: null,
-            new_content: 'new',
-            selected: true,
-            replace_all_matches: false,
-          },
-          {
-            path: 'shared/worker.ts',
-            mode: 'rewrite',
-            reason: 'worker',
-            old_snippet: null,
-            new_content: 'new',
-            selected: true,
-            replace_all_matches: false,
-          },
-        ],
-      }),
-    })
-
-    const currentArtifact = createArtifact({
+function createComparisonArtifacts() {
+  const entry = createEntry({
+    artifact: createArtifact({
       files: [
-        { path: 'current/alpha.py', purpose: 'alpha', content: '', selected: true },
-        { path: 'current/beta.py', purpose: 'beta', content: '', selected: true },
-        { path: 'current/gamma.py', purpose: 'gamma', content: '', selected: true },
-        { path: 'current/zeta.py', purpose: 'zeta', content: '', selected: true },
+        { path: 'backend/api.py', purpose: 'api', content: '', selected: true },
+        { path: 'backend/main.py', purpose: 'main', content: '', selected: true },
+        { path: 'docs/plan.md', purpose: 'docs', content: '', selected: true },
+        { path: 'frontend/App.tsx', purpose: 'app', content: '', selected: true },
         { path: 'shared/config.json', purpose: 'shared', content: '', selected: true },
       ],
       changes: [
         {
-          path: 'current/change-alpha.ts',
+          path: 'backend/routes.py',
           mode: 'patch',
-          reason: 'alpha',
+          reason: 'routes',
           old_snippet: 'old',
           new_content: 'new',
           selected: true,
           replace_all_matches: false,
         },
         {
-          path: 'current/change-beta.ts',
+          path: 'backend/settings.py',
           mode: 'patch',
-          reason: 'beta',
+          reason: 'settings',
           old_snippet: 'old',
           new_content: 'new',
           selected: true,
           replace_all_matches: false,
         },
         {
-          path: 'current/change-gamma.ts',
+          path: 'frontend/dashboard.tsx',
           mode: 'rewrite',
-          reason: 'gamma',
-          old_snippet: null,
-          new_content: 'new',
-          selected: true,
-          replace_all_matches: false,
-        },
-        {
-          path: 'current/change-zeta.ts',
-          mode: 'rewrite',
-          reason: 'zeta',
+          reason: 'dashboard',
           old_snippet: null,
           new_content: 'new',
           selected: true,
@@ -143,8 +76,82 @@ describe('GenerationHistoryEntryPreview', () => {
           selected: true,
           replace_all_matches: false,
         },
+        {
+          path: 'shared/worker.ts',
+          mode: 'rewrite',
+          reason: 'worker',
+          old_snippet: null,
+          new_content: 'new',
+          selected: true,
+          replace_all_matches: false,
+        },
       ],
-    })
+    }),
+  })
+
+  const currentArtifact = createArtifact({
+    files: [
+      { path: 'current/alpha.py', purpose: 'alpha', content: '', selected: true },
+      { path: 'current/beta.py', purpose: 'beta', content: '', selected: true },
+      { path: 'current/gamma.py', purpose: 'gamma', content: '', selected: true },
+      { path: 'current/zeta.py', purpose: 'zeta', content: '', selected: true },
+      { path: 'shared/config.json', purpose: 'shared', content: '', selected: true },
+    ],
+    changes: [
+      {
+        path: 'current/change-alpha.ts',
+        mode: 'patch',
+        reason: 'alpha',
+        old_snippet: 'old',
+        new_content: 'new',
+        selected: true,
+        replace_all_matches: false,
+      },
+      {
+        path: 'current/change-beta.ts',
+        mode: 'patch',
+        reason: 'beta',
+        old_snippet: 'old',
+        new_content: 'new',
+        selected: true,
+        replace_all_matches: false,
+      },
+      {
+        path: 'current/change-gamma.ts',
+        mode: 'rewrite',
+        reason: 'gamma',
+        old_snippet: null,
+        new_content: 'new',
+        selected: true,
+        replace_all_matches: false,
+      },
+      {
+        path: 'current/change-zeta.ts',
+        mode: 'rewrite',
+        reason: 'zeta',
+        old_snippet: null,
+        new_content: 'new',
+        selected: true,
+        replace_all_matches: false,
+      },
+      {
+        path: 'shared/theme.ts',
+        mode: 'rewrite',
+        reason: 'theme',
+        old_snippet: null,
+        new_content: 'new',
+        selected: true,
+        replace_all_matches: false,
+      },
+    ],
+  })
+
+  return { entry, currentArtifact }
+}
+
+describe('GenerationHistoryEntryPreview', () => {
+  it('renders path detail lists and overflow messaging for comparison differences', () => {
+    const { entry, currentArtifact } = createComparisonArtifacts()
 
     render(<GenerationHistoryEntryPreview entry={entry} currentArtifact={currentArtifact} />)
 
@@ -175,6 +182,47 @@ describe('GenerationHistoryEntryPreview', () => {
     expect(scope.getByText(/current\/change-gamma.ts/i)).toBeInTheDocument()
   })
 
+  it('copies the full path list for a comparison category, including hidden overflow items', async () => {
+    const user = userEvent.setup()
+    const { entry, currentArtifact } = createComparisonArtifacts()
+    const writeText = vi.fn().mockResolvedValue(undefined)
+
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+
+    render(<GenerationHistoryEntryPreview entry={entry} currentArtifact={currentArtifact} />)
+
+    const section = screen.getByText(/^files only in this generation$/i).closest('div.generation-history-preview-block')
+    expect(section).not.toBeNull()
+
+    await user.click(within(section as HTMLElement).getByRole('button', { name: /copy paths/i }))
+
+    expect(writeText).toHaveBeenCalledWith('backend/api.py\nbackend/main.py\ndocs/plan.md\nfrontend/App.tsx')
+    expect(within(section as HTMLElement).getByText(/copied 4 paths/i)).toBeInTheDocument()
+  })
+
+  it('shows copy failure feedback when clipboard writes reject', async () => {
+    const user = userEvent.setup()
+    const { entry, currentArtifact } = createComparisonArtifacts()
+    const writeText = vi.fn().mockRejectedValue(new Error('clipboard unavailable'))
+
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+
+    render(<GenerationHistoryEntryPreview entry={entry} currentArtifact={currentArtifact} />)
+
+    const section = screen.getByText(/^changes only in current$/i).closest('div.generation-history-preview-block')
+    expect(section).not.toBeNull()
+
+    await user.click(within(section as HTMLElement).getByRole('button', { name: /copy paths/i }))
+
+    expect(within(section as HTMLElement).getByText(/copy failed/i)).toBeInTheDocument()
+  })
+
   it('keeps showing only the active message for the active generation', () => {
     const entry = createEntry()
     const currentArtifact = createArtifact({
@@ -195,3 +243,4 @@ describe('GenerationHistoryEntryPreview', () => {
     expect(screen.queryByText(/compared to current/i)).not.toBeInTheDocument()
   })
 })
+
