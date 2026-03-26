@@ -223,6 +223,53 @@ describe('GenerationHistoryEntryPreview', () => {
     expect(within(section as HTMLElement).getByText(/copy failed/i)).toBeInTheDocument()
   })
 
+  it('expands and collapses overflowing path sections in place', async () => {
+    const user = userEvent.setup()
+    const { entry, currentArtifact } = createComparisonArtifacts()
+
+    render(<GenerationHistoryEntryPreview entry={entry} currentArtifact={currentArtifact} />)
+
+    const section = screen.getByText(/^files only in this generation$/i).closest('div.generation-history-preview-block')
+    expect(section).not.toBeNull()
+    const scope = within(section as HTMLElement)
+
+    expect(scope.getByRole('button', { name: /show all/i })).toBeInTheDocument()
+    expect(scope.queryByText(/frontend\/App.tsx/i)).not.toBeInTheDocument()
+    expect(scope.getByText(/^\+1 more$/i)).toBeInTheDocument()
+
+    await user.click(scope.getByRole('button', { name: /show all/i }))
+
+    expect(scope.getByRole('button', { name: /show less/i })).toBeInTheDocument()
+    expect(scope.getByText(/frontend\/App.tsx/i)).toBeInTheDocument()
+    expect(scope.queryByText(/^\+1 more$/i)).not.toBeInTheDocument()
+
+    await user.click(scope.getByRole('button', { name: /show less/i }))
+
+    expect(scope.getByRole('button', { name: /show all/i })).toBeInTheDocument()
+    expect(scope.queryByText(/frontend\/App.tsx/i)).not.toBeInTheDocument()
+    expect(scope.getByText(/^\+1 more$/i)).toBeInTheDocument()
+  })
+
+  it('does not show expand controls for sections without overflow', () => {
+    const entry = createEntry({
+      artifact: createArtifact({
+        files: [
+          { path: 'backend/api.py', purpose: 'api', content: '', selected: true },
+          { path: 'shared/config.json', purpose: 'shared', content: '', selected: true },
+        ],
+      }),
+    })
+    const currentArtifact = createArtifact({
+      files: [{ path: 'shared/config.json', purpose: 'shared', content: '', selected: true }],
+    })
+
+    render(<GenerationHistoryEntryPreview entry={entry} currentArtifact={currentArtifact} />)
+
+    const section = screen.getByText(/^files only in this generation$/i).closest('div.generation-history-preview-block')
+    expect(section).not.toBeNull()
+    expect(within(section as HTMLElement).queryByRole('button', { name: /show all/i })).not.toBeInTheDocument()
+  })
+
   it('keeps showing only the active message for the active generation', () => {
     const entry = createEntry()
     const currentArtifact = createArtifact({
@@ -243,4 +290,3 @@ describe('GenerationHistoryEntryPreview', () => {
     expect(screen.queryByText(/compared to current/i)).not.toBeInTheDocument()
   })
 })
-
