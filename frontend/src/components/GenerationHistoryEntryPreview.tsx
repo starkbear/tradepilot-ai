@@ -76,9 +76,9 @@ function buildComparisonDetails(summary: ComparisonSummary): ComparisonDetailLis
   ].filter((detail) => detail.paths.length > 0)
 }
 
-function getVisiblePaths(paths: string[]) {
+function getVisiblePaths(paths: string[], isExpanded: boolean) {
   return {
-    displayPaths: paths.slice(0, DETAIL_PATH_LIMIT),
+    displayPaths: isExpanded ? paths : paths.slice(0, DETAIL_PATH_LIMIT),
     hiddenCount: Math.max(paths.length - DETAIL_PATH_LIMIT, 0),
   }
 }
@@ -89,6 +89,7 @@ export function GenerationHistoryEntryPreview({
   isActive = false,
 }: GenerationHistoryEntryPreviewProps) {
   const [copyState, setCopyState] = useState<CopyState>(null)
+  const [expandedDetailKeys, setExpandedDetailKeys] = useState<string[]>([])
   const warningCount = entry.artifact.warnings.length
   const nextStepCount = entry.artifact.next_steps.length
   const applySummary = entry.apply_summary
@@ -106,6 +107,14 @@ export function GenerationHistoryEntryPreview({
     } catch {
       setCopyState({ key: detail.key, status: 'error', count: detail.paths.length })
     }
+  }
+
+  function toggleExpanded(detailKey: string) {
+    setExpandedDetailKeys((currentKeys) =>
+      currentKeys.includes(detailKey)
+        ? currentKeys.filter((key) => key !== detailKey)
+        : [...currentKeys, detailKey],
+    )
   }
 
   return (
@@ -134,22 +143,30 @@ export function GenerationHistoryEntryPreview({
             <li>{`Shared Changes: ${comparisonSummary.sharedChanges}`}</li>
           </ul>
           {comparisonDetails.map((detail) => {
-            const { displayPaths, hiddenCount } = getVisiblePaths(detail.paths)
+            const isExpanded = expandedDetailKeys.includes(detail.key)
+            const { displayPaths, hiddenCount } = getVisiblePaths(detail.paths, isExpanded)
             const detailCopyState = copyState?.key === detail.key ? copyState : null
 
             return (
               <div key={detail.key} className="generation-history-preview-block">
                 <div className="generation-history-header">
                   <p className="generation-history-preview-label">{detail.label}</p>
-                  <button type="button" className="secondary-button" onClick={() => handleCopyPaths(detail)}>
-                    Copy Paths
-                  </button>
+                  <div className="generation-history-actions">
+                    {hiddenCount > 0 ? (
+                      <button type="button" className="secondary-button" onClick={() => toggleExpanded(detail.key)}>
+                        {isExpanded ? 'Show less' : 'Show all'}
+                      </button>
+                    ) : null}
+                    <button type="button" className="secondary-button" onClick={() => handleCopyPaths(detail)}>
+                      Copy Paths
+                    </button>
+                  </div>
                 </div>
                 <ul className="generation-history-preview-list">
                   {displayPaths.map((path) => (
                     <li key={path}>{path}</li>
                   ))}
-                  {hiddenCount > 0 ? <li>{`+${hiddenCount} more`}</li> : null}
+                  {hiddenCount > 0 && !isExpanded ? <li>{`+${hiddenCount} more`}</li> : null}
                 </ul>
                 {detailCopyState?.status === 'success' ? (
                   <p className="generation-history-preview-note">{`Copied ${detailCopyState.count} paths`}</p>
