@@ -33,6 +33,8 @@ type CopyState = {
   count: number
 } | null
 
+type FilterQueries = Record<string, string>
+
 const DETAIL_PATH_LIMIT = 3
 
 function sortedDifference(source: Set<string>, target: Set<string>) {
@@ -76,10 +78,24 @@ function buildComparisonDetails(summary: ComparisonSummary): ComparisonDetailLis
   ].filter((detail) => detail.paths.length > 0)
 }
 
-function getVisiblePaths(paths: string[], isExpanded: boolean) {
+function getVisiblePaths(paths: string[], isExpanded: boolean, query: string) {
+  if (!isExpanded) {
+    return {
+      displayPaths: paths.slice(0, DETAIL_PATH_LIMIT),
+      hiddenCount: Math.max(paths.length - DETAIL_PATH_LIMIT, 0),
+      filteredPathCount: paths.length,
+    }
+  }
+
+  const normalizedQuery = query.trim().toLowerCase()
+  const filteredPaths = normalizedQuery.length > 0
+    ? paths.filter((path) => path.toLowerCase().includes(normalizedQuery))
+    : paths
+
   return {
-    displayPaths: isExpanded ? paths : paths.slice(0, DETAIL_PATH_LIMIT),
+    displayPaths: filteredPaths,
     hiddenCount: Math.max(paths.length - DETAIL_PATH_LIMIT, 0),
+    filteredPathCount: filteredPaths.length,
   }
 }
 
@@ -90,6 +106,7 @@ export function GenerationHistoryEntryPreview({
 }: GenerationHistoryEntryPreviewProps) {
   const [copyState, setCopyState] = useState<CopyState>(null)
   const [expandedDetailKeys, setExpandedDetailKeys] = useState<string[]>([])
+  const [filterQueries, setFilterQueries] = useState<FilterQueries>({})
   const warningCount = entry.artifact.warnings.length
   const nextStepCount = entry.artifact.next_steps.length
   const applySummary = entry.apply_summary
@@ -115,6 +132,22 @@ export function GenerationHistoryEntryPreview({
         ? currentKeys.filter((key) => key !== detailKey)
         : [...currentKeys, detailKey],
     )
+    setFilterQueries((currentQueries) => {
+      if (!(detailKey in currentQueries)) {
+        return currentQueries
+      }
+
+      const nextQueries = { ...currentQueries }
+      delete nextQueries[detailKey]
+      return nextQueries
+    })
+  }
+
+  function updateFilterQuery(detailKey: string, value: string) {
+    setFilterQueries((currentQueries) => ({
+      ...currentQueries,
+      [detailKey]: value,
+    }))
   }
 
   return (
@@ -144,7 +177,8 @@ export function GenerationHistoryEntryPreview({
           </ul>
           {comparisonDetails.map((detail) => {
             const isExpanded = expandedDetailKeys.includes(detail.key)
-            const { displayPaths, hiddenCount } = getVisiblePaths(detail.paths, isExpanded)
+            const query = filterQueries[detail.key] ?? ''
+            const { displayPaths, hiddenCount, filteredPathCount } = getVisiblePaths(detail.paths, isExpanded, query)
             const detailCopyState = copyState?.key === detail.key ? copyState : null
 
             return (
@@ -162,12 +196,24 @@ export function GenerationHistoryEntryPreview({
                     </button>
                   </div>
                 </div>
+                {isExpanded && hiddenCount > 0 ? (
+                  <input
+                    type="text"
+                    className="generation-history-filter-input"
+                    placeholder="Filter paths"
+                    value={query}
+                    onChange={(event) => updateFilterQuery(detail.key, event.target.value)}
+                  />
+                ) : null}
                 <ul className="generation-history-preview-list">
                   {displayPaths.map((path) => (
                     <li key={path}>{path}</li>
                   ))}
                   {hiddenCount > 0 && !isExpanded ? <li>{`+${hiddenCount} more`}</li> : null}
                 </ul>
+                {isExpanded && hiddenCount > 0 && filteredPathCount === 0 ? (
+                  <p className="generation-history-preview-note">No matching paths.</p>
+                ) : null}
                 {detailCopyState?.status === 'success' ? (
                   <p className="generation-history-preview-note">{`Copied ${detailCopyState.count} paths`}</p>
                 ) : null}

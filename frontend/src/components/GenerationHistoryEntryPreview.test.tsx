@@ -250,6 +250,36 @@ describe('GenerationHistoryEntryPreview', () => {
     expect(scope.getByText(/^\+1 more$/i)).toBeInTheDocument()
   })
 
+  it('filters expanded path sections in place', async () => {
+    const user = userEvent.setup()
+    const { entry, currentArtifact } = createComparisonArtifacts()
+
+    render(<GenerationHistoryEntryPreview entry={entry} currentArtifact={currentArtifact} />)
+
+    const section = screen.getByText(/^files only in this generation$/i).closest('div.generation-history-preview-block')
+    expect(section).not.toBeNull()
+    const scope = within(section as HTMLElement)
+
+    expect(scope.queryByPlaceholderText(/filter paths/i)).not.toBeInTheDocument()
+    await user.click(scope.getByRole('button', { name: /show all/i }))
+
+    const filterInput = scope.getByPlaceholderText(/filter paths/i)
+    await user.type(filterInput, 'frontEND')
+
+    expect(scope.getByText(/frontend\/App.tsx/i)).toBeInTheDocument()
+    expect(scope.queryByText(/backend\/api.py/i)).not.toBeInTheDocument()
+    expect(scope.queryByText(/^\+1 more$/i)).not.toBeInTheDocument()
+
+    await user.clear(filterInput)
+    await user.type(filterInput, 'missing')
+
+    expect(scope.getByText(/no matching paths\./i)).toBeInTheDocument()
+
+    await user.click(scope.getByRole('button', { name: /show less/i }))
+    expect(scope.queryByPlaceholderText(/filter paths/i)).not.toBeInTheDocument()
+    expect(scope.getByText(/^\+1 more$/i)).toBeInTheDocument()
+  })
+
   it('does not show expand controls for sections without overflow', () => {
     const entry = createEntry({
       artifact: createArtifact({
