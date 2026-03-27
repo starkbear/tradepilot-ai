@@ -19,6 +19,8 @@ type ComparisonSummary = {
   onlyInCurrentFilesPaths: string[]
   onlyInPreviewChangesPaths: string[]
   onlyInCurrentChangesPaths: string[]
+  sharedFilesPaths: string[]
+  sharedChangesPaths: string[]
 }
 
 type ComparisonDetailList = {
@@ -41,6 +43,10 @@ function sortedDifference(source: Set<string>, target: Set<string>) {
   return [...source].filter((path) => !target.has(path)).sort((left, right) => left.localeCompare(right))
 }
 
+function sortedIntersection(left: Set<string>, right: Set<string>) {
+  return [...left].filter((path) => right.has(path)).sort((a, b) => a.localeCompare(b))
+}
+
 function buildComparisonSummary(previewArtifact: GenerationArtifact, currentArtifact: GenerationArtifact): ComparisonSummary {
   const previewFiles = new Set(previewArtifact.files.map((file) => file.path))
   const currentFiles = new Set(currentArtifact.files.map((file) => file.path))
@@ -51,21 +57,22 @@ function buildComparisonSummary(previewArtifact: GenerationArtifact, currentArti
   const onlyInCurrentFilesPaths = sortedDifference(currentFiles, previewFiles)
   const onlyInPreviewChangesPaths = sortedDifference(previewChanges, currentChanges)
   const onlyInCurrentChangesPaths = sortedDifference(currentChanges, previewChanges)
-
-  const sharedFiles = [...previewFiles].filter((path) => currentFiles.has(path)).length
-  const sharedChanges = [...previewChanges].filter((path) => currentChanges.has(path)).length
+  const sharedFilesPaths = sortedIntersection(previewFiles, currentFiles)
+  const sharedChangesPaths = sortedIntersection(previewChanges, currentChanges)
 
   return {
     onlyInPreviewFiles: onlyInPreviewFilesPaths.length,
     onlyInCurrentFiles: onlyInCurrentFilesPaths.length,
-    sharedFiles,
+    sharedFiles: sharedFilesPaths.length,
     onlyInPreviewChanges: onlyInPreviewChangesPaths.length,
     onlyInCurrentChanges: onlyInCurrentChangesPaths.length,
-    sharedChanges,
+    sharedChanges: sharedChangesPaths.length,
     onlyInPreviewFilesPaths,
     onlyInCurrentFilesPaths,
     onlyInPreviewChangesPaths,
     onlyInCurrentChangesPaths,
+    sharedFilesPaths,
+    sharedChangesPaths,
   }
 }
 
@@ -75,6 +82,13 @@ function buildComparisonDetails(summary: ComparisonSummary): ComparisonDetailLis
     { key: 'current-files', label: 'Files only in current', paths: summary.onlyInCurrentFilesPaths },
     { key: 'preview-changes', label: 'Changes only in this generation', paths: summary.onlyInPreviewChangesPaths },
     { key: 'current-changes', label: 'Changes only in current', paths: summary.onlyInCurrentChangesPaths },
+  ].filter((detail) => detail.paths.length > 0)
+}
+
+function buildSharedDetails(summary: ComparisonSummary): ComparisonDetailList[] {
+  return [
+    { key: 'shared-files', label: 'Shared files', paths: summary.sharedFilesPaths },
+    { key: 'shared-changes', label: 'Shared changes', paths: summary.sharedChangesPaths },
   ].filter((detail) => detail.paths.length > 0)
 }
 
@@ -106,12 +120,16 @@ export function GenerationHistoryEntryPreview({
 }: GenerationHistoryEntryPreviewProps) {
   const [copyState, setCopyState] = useState<CopyState>(null)
   const [expandedDetailKeys, setExpandedDetailKeys] = useState<string[]>([])
+  const [visibleSharedDetailKeys, setVisibleSharedDetailKeys] = useState<string[]>([])
   const [filterQueries, setFilterQueries] = useState<FilterQueries>({})
   const warningCount = entry.artifact.warnings.length
   const nextStepCount = entry.artifact.next_steps.length
   const applySummary = entry.apply_summary
   const comparisonSummary = !isActive && currentArtifact ? buildComparisonSummary(entry.artifact, currentArtifact) : null
   const comparisonDetails = comparisonSummary ? buildComparisonDetails(comparisonSummary) : []
+  const sharedDetails = comparisonSummary ? buildSharedDetails(comparisonSummary) : []
+  const visibleSharedDetails = sharedDetails.filter((detail) => visibleSharedDetailKeys.includes(detail.key))
+  const visibleDetails = [...comparisonDetails, ...visibleSharedDetails]
 
   function formatTimestamp(value: string) {
     return value.replace('T', ' ').slice(0, 16) + ' UTC'
@@ -126,12 +144,7 @@ export function GenerationHistoryEntryPreview({
     }
   }
 
-  function toggleExpanded(detailKey: string) {
-    setExpandedDetailKeys((currentKeys) =>
-      currentKeys.includes(detailKey)
-        ? currentKeys.filter((key) => key !== detailKey)
-        : [...currentKeys, detailKey],
-    )
+  function clearFilterQuery(detailKey: string) {
     setFilterQueries((currentQueries) => {
       if (!(detailKey in currentQueries)) {
         return currentQueries
@@ -141,6 +154,25 @@ export function GenerationHistoryEntryPreview({
       delete nextQueries[detailKey]
       return nextQueries
     })
+  }
+
+  function toggleExpanded(detailKey: string) {
+    setExpandedDetailKeys((currentKeys) =>
+      currentKeys.includes(detailKey)
+        ? currentKeys.filter((key) => key !== detailKey)
+        : [...currentKeys, detailKey],
+    )
+    clearFilterQuery(detailKey)
+  }
+
+  function toggleSharedDetail(detailKey: string) {
+    setVisibleSharedDetailKeys((currentKeys) =>
+      currentKeys.includes(detailKey)
+        ? currentKeys.filter((key) => key !== detailKey)
+        : [...currentKeys, detailKey],
+    )
+    setExpandedDetailKeys((currentKeys) => currentKeys.filter((key) => key !== detailKey))
+    clearFilterQuery(detailKey)
   }
 
   function updateFilterQuery(detailKey: string, value: string) {
@@ -175,7 +207,28 @@ export function GenerationHistoryEntryPreview({
             <li>{`Changes Only in Current: ${comparisonSummary.onlyInCurrentChanges}`}</li>
             <li>{`Shared Changes: ${comparisonSummary.sharedChanges}`}</li>
           </ul>
-          {comparisonDetails.map((detail) => {
+          {sharedDetails.length > 0 ? (
+            <div className="generation-history-actions">
+              {sharedDetails.map((detail) => {
+                const isVisible = visibleSharedDetailKeys.includes(detail.key)
+                const buttonLabel = detail.key === 'shared-files'
+                  ? isVisible ? 'Hide shared files' : 'Show shared files'
+                  : isVisible ? 'Hide shared changes' : 'Show shared changes'
+
+                return (
+                  <button
+                    key={detail.key}
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => toggleSharedDetail(detail.key)}
+                  >
+                    {buttonLabel}
+                  </button>
+                )
+              })}
+            </div>
+          ) : null}
+          {visibleDetails.map((detail) => {
             const isExpanded = expandedDetailKeys.includes(detail.key)
             const query = filterQueries[detail.key] ?? ''
             const { displayPaths, hiddenCount, filteredPathCount } = getVisiblePaths(detail.paths, isExpanded, query)

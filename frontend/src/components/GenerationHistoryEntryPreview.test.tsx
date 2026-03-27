@@ -182,6 +182,70 @@ describe('GenerationHistoryEntryPreview', () => {
     expect(scope.getByText(/current\/change-gamma.ts/i)).toBeInTheDocument()
   })
 
+  it('reveals shared file and change details on demand', async () => {
+    const user = userEvent.setup()
+    const { entry, currentArtifact } = createComparisonArtifacts()
+
+    render(<GenerationHistoryEntryPreview entry={entry} currentArtifact={currentArtifact} />)
+
+    expect(screen.getByRole('button', { name: /show shared files/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /show shared changes/i })).toBeInTheDocument()
+    expect(screen.queryByText(/^shared files$/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^shared changes$/i)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /show shared files/i }))
+    expect(screen.getByRole('button', { name: /hide shared files/i })).toBeInTheDocument()
+    expect(screen.getByText(/^shared files$/i)).toBeInTheDocument()
+    expect(screen.getByText(/shared\/config.json/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /show shared changes/i }))
+    expect(screen.getByRole('button', { name: /hide shared changes/i })).toBeInTheDocument()
+    expect(screen.getByText(/^shared changes$/i)).toBeInTheDocument()
+    expect(screen.getByText(/shared\/theme.ts/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /hide shared files/i }))
+    expect(screen.queryByText(/^shared files$/i)).not.toBeInTheDocument()
+  })
+
+  it('does not show shared detail toggles when there are no shared paths', () => {
+    const entry = createEntry({
+      artifact: createArtifact({
+        files: [{ path: 'backend/api.py', purpose: 'api', content: '', selected: true }],
+        changes: [
+          {
+            path: 'backend/routes.py',
+            mode: 'patch',
+            reason: 'routes',
+            old_snippet: 'old',
+            new_content: 'new',
+            selected: true,
+            replace_all_matches: false,
+          },
+        ],
+      }),
+    })
+
+    const currentArtifact = createArtifact({
+      files: [{ path: 'current/alpha.py', purpose: 'alpha', content: '', selected: true }],
+      changes: [
+        {
+          path: 'current/change-alpha.ts',
+          mode: 'patch',
+          reason: 'alpha',
+          old_snippet: 'old',
+          new_content: 'new',
+          selected: true,
+          replace_all_matches: false,
+        },
+      ],
+    })
+
+    render(<GenerationHistoryEntryPreview entry={entry} currentArtifact={currentArtifact} />)
+
+    expect(screen.queryByRole('button', { name: /show shared files/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /show shared changes/i })).not.toBeInTheDocument()
+  })
+
   it('copies the full path list for a comparison category, including hidden overflow items', async () => {
     const user = userEvent.setup()
     const { entry, currentArtifact } = createComparisonArtifacts()
