@@ -751,10 +751,12 @@ describe('App', () => {
     expect(within(preview).getByText(/compared to current/i)).toBeInTheDocument()
     expect(within(preview).getByText(/files only in this generation: 1/i)).toBeInTheDocument()
     expect(within(preview).getByText(/files only in current: 1/i)).toBeInTheDocument()
-    expect(within(preview).getByText(/shared files: 1/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/matching files: 1/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/drifted files: 0/i)).toBeInTheDocument()
     expect(within(preview).getByText(/changes only in this generation: 1/i)).toBeInTheDocument()
     expect(within(preview).getByText(/changes only in current: 1/i)).toBeInTheDocument()
-    expect(within(preview).getByText(/shared changes: 1/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/matching changes: 0/i)).toBeInTheDocument()
+    expect(within(preview).getByText(/drifted changes: 1/i)).toBeInTheDocument()
   })
 
   it('shows an active-generation message instead of a comparison summary', async () => {
@@ -2006,4 +2008,5 @@ describe('App', () => {
     )
   })
 })
+
 
