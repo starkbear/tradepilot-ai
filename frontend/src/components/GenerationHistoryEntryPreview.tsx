@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import type { GenerationArtifact, GenerationHistoryEntry } from '../lib/types'
+import type { FileChangeDraft, FileDraft, GenerationArtifact, GenerationHistoryEntry } from '../lib/types'
 
 type GenerationHistoryEntryPreviewProps = {
   entry: GenerationHistoryEntry
@@ -11,16 +11,20 @@ type GenerationHistoryEntryPreviewProps = {
 type ComparisonSummary = {
   onlyInPreviewFiles: number
   onlyInCurrentFiles: number
-  sharedFiles: number
+  matchingFiles: number
+  driftedFiles: number
   onlyInPreviewChanges: number
   onlyInCurrentChanges: number
-  sharedChanges: number
+  matchingChanges: number
+  driftedChanges: number
   onlyInPreviewFilesPaths: string[]
   onlyInCurrentFilesPaths: string[]
   onlyInPreviewChangesPaths: string[]
   onlyInCurrentChangesPaths: string[]
-  sharedFilesPaths: string[]
-  sharedChangesPaths: string[]
+  matchingFilesPaths: string[]
+  driftedFilesPaths: string[]
+  matchingChangesPaths: string[]
+  driftedChangesPaths: string[]
 }
 
 type ComparisonDetailList = {
@@ -47,11 +51,62 @@ function sortedIntersection(left: Set<string>, right: Set<string>) {
   return [...left].filter((path) => right.has(path)).sort((a, b) => a.localeCompare(b))
 }
 
+function buildPathMap<T extends { path: string }>(items: T[]) {
+  return new Map(items.map((item) => [item.path, item]))
+}
+
+function buildMatchingAndDriftedPaths<T extends { path: string }>(
+  sharedPaths: string[],
+  previewMap: Map<string, T>,
+  currentMap: Map<string, T>,
+  getSignature: (item: T) => string,
+) {
+  const matchingPaths: string[] = []
+  const driftedPaths: string[] = []
+
+  sharedPaths.forEach((path) => {
+    const previewItem = previewMap.get(path)
+    const currentItem = currentMap.get(path)
+
+    if (!previewItem || !currentItem) {
+      driftedPaths.push(path)
+      return
+    }
+
+    if (getSignature(previewItem) === getSignature(currentItem)) {
+      matchingPaths.push(path)
+      return
+    }
+
+    driftedPaths.push(path)
+  })
+
+  return { matchingPaths, driftedPaths }
+}
+
+function buildFileSignature(file: FileDraft) {
+  return file.content
+}
+
+function buildChangeSignature(change: FileChangeDraft) {
+  return JSON.stringify({
+    mode: change.mode,
+    old_snippet: change.old_snippet ?? '',
+    new_content: change.new_content,
+    replace_all_matches: change.replace_all_matches,
+  })
+}
+
 function buildComparisonSummary(previewArtifact: GenerationArtifact, currentArtifact: GenerationArtifact): ComparisonSummary {
   const previewFiles = new Set(previewArtifact.files.map((file) => file.path))
   const currentFiles = new Set(currentArtifact.files.map((file) => file.path))
   const previewChanges = new Set(previewArtifact.changes.map((change) => change.path))
   const currentChanges = new Set(currentArtifact.changes.map((change) => change.path))
+
+  const previewFileMap = buildPathMap(previewArtifact.files)
+  const currentFileMap = buildPathMap(currentArtifact.files)
+  const previewChangeMap = buildPathMap(previewArtifact.changes)
+  const currentChangeMap = buildPathMap(currentArtifact.changes)
 
   const onlyInPreviewFilesPaths = sortedDifference(previewFiles, currentFiles)
   const onlyInCurrentFilesPaths = sortedDifference(currentFiles, previewFiles)
@@ -60,19 +115,36 @@ function buildComparisonSummary(previewArtifact: GenerationArtifact, currentArti
   const sharedFilesPaths = sortedIntersection(previewFiles, currentFiles)
   const sharedChangesPaths = sortedIntersection(previewChanges, currentChanges)
 
+  const { matchingPaths: matchingFilesPaths, driftedPaths: driftedFilesPaths } = buildMatchingAndDriftedPaths(
+    sharedFilesPaths,
+    previewFileMap,
+    currentFileMap,
+    buildFileSignature,
+  )
+  const { matchingPaths: matchingChangesPaths, driftedPaths: driftedChangesPaths } = buildMatchingAndDriftedPaths(
+    sharedChangesPaths,
+    previewChangeMap,
+    currentChangeMap,
+    buildChangeSignature,
+  )
+
   return {
     onlyInPreviewFiles: onlyInPreviewFilesPaths.length,
     onlyInCurrentFiles: onlyInCurrentFilesPaths.length,
-    sharedFiles: sharedFilesPaths.length,
+    matchingFiles: matchingFilesPaths.length,
+    driftedFiles: driftedFilesPaths.length,
     onlyInPreviewChanges: onlyInPreviewChangesPaths.length,
     onlyInCurrentChanges: onlyInCurrentChangesPaths.length,
-    sharedChanges: sharedChangesPaths.length,
+    matchingChanges: matchingChangesPaths.length,
+    driftedChanges: driftedChangesPaths.length,
     onlyInPreviewFilesPaths,
     onlyInCurrentFilesPaths,
     onlyInPreviewChangesPaths,
     onlyInCurrentChangesPaths,
-    sharedFilesPaths,
-    sharedChangesPaths,
+    matchingFilesPaths,
+    driftedFilesPaths,
+    matchingChangesPaths,
+    driftedChangesPaths,
   }
 }
 
@@ -87,8 +159,10 @@ function buildComparisonDetails(summary: ComparisonSummary): ComparisonDetailLis
 
 function buildSharedDetails(summary: ComparisonSummary): ComparisonDetailList[] {
   return [
-    { key: 'shared-files', label: 'Shared files', paths: summary.sharedFilesPaths },
-    { key: 'shared-changes', label: 'Shared changes', paths: summary.sharedChangesPaths },
+    { key: 'matching-files', label: 'Matching files', paths: summary.matchingFilesPaths },
+    { key: 'drifted-files', label: 'Drifted files', paths: summary.driftedFilesPaths },
+    { key: 'matching-changes', label: 'Matching changes', paths: summary.matchingChangesPaths },
+    { key: 'drifted-changes', label: 'Drifted changes', paths: summary.driftedChangesPaths },
   ].filter((detail) => detail.paths.length > 0)
 }
 
@@ -111,6 +185,24 @@ function getVisiblePaths(paths: string[], isExpanded: boolean, query: string) {
     hiddenCount: Math.max(paths.length - DETAIL_PATH_LIMIT, 0),
     filteredPathCount: filteredPaths.length,
   }
+}
+
+function getSharedToggleLabel(detailKey: string, isVisible: boolean) {
+  const action = isVisible ? 'Hide' : 'Show'
+
+  if (detailKey === 'matching-files') {
+    return `${action} matching files`
+  }
+
+  if (detailKey === 'drifted-files') {
+    return `${action} drifted files`
+  }
+
+  if (detailKey === 'matching-changes') {
+    return `${action} matching changes`
+  }
+
+  return `${action} drifted changes`
 }
 
 export function GenerationHistoryEntryPreview({
@@ -202,18 +294,17 @@ export function GenerationHistoryEntryPreview({
           <ul className="generation-history-preview-list">
             <li>{`Files Only in This Generation: ${comparisonSummary.onlyInPreviewFiles}`}</li>
             <li>{`Files Only in Current: ${comparisonSummary.onlyInCurrentFiles}`}</li>
-            <li>{`Shared Files: ${comparisonSummary.sharedFiles}`}</li>
+            <li>{`Matching Files: ${comparisonSummary.matchingFiles}`}</li>
+            <li>{`Drifted Files: ${comparisonSummary.driftedFiles}`}</li>
             <li>{`Changes Only in This Generation: ${comparisonSummary.onlyInPreviewChanges}`}</li>
             <li>{`Changes Only in Current: ${comparisonSummary.onlyInCurrentChanges}`}</li>
-            <li>{`Shared Changes: ${comparisonSummary.sharedChanges}`}</li>
+            <li>{`Matching Changes: ${comparisonSummary.matchingChanges}`}</li>
+            <li>{`Drifted Changes: ${comparisonSummary.driftedChanges}`}</li>
           </ul>
           {sharedDetails.length > 0 ? (
             <div className="generation-history-actions">
               {sharedDetails.map((detail) => {
                 const isVisible = visibleSharedDetailKeys.includes(detail.key)
-                const buttonLabel = detail.key === 'shared-files'
-                  ? isVisible ? 'Hide shared files' : 'Show shared files'
-                  : isVisible ? 'Hide shared changes' : 'Show shared changes'
 
                 return (
                   <button
@@ -222,7 +313,7 @@ export function GenerationHistoryEntryPreview({
                     className="secondary-button"
                     onClick={() => toggleSharedDetail(detail.key)}
                   >
-                    {buttonLabel}
+                    {getSharedToggleLabel(detail.key, isVisible)}
                   </button>
                 )
               })}

@@ -33,19 +33,20 @@ function createComparisonArtifacts() {
   const entry = createEntry({
     artifact: createArtifact({
       files: [
-        { path: 'backend/api.py', purpose: 'api', content: '', selected: true },
-        { path: 'backend/main.py', purpose: 'main', content: '', selected: true },
-        { path: 'docs/plan.md', purpose: 'docs', content: '', selected: true },
-        { path: 'frontend/App.tsx', purpose: 'app', content: '', selected: true },
-        { path: 'shared/config.json', purpose: 'shared', content: '', selected: true },
+        { path: 'backend/api.py', purpose: 'api', content: 'preview-api', selected: true },
+        { path: 'backend/main.py', purpose: 'main', content: 'preview-main', selected: true },
+        { path: 'docs/plan.md', purpose: 'docs', content: 'preview-plan', selected: true },
+        { path: 'frontend/App.tsx', purpose: 'app', content: 'preview-app', selected: true },
+        { path: 'shared/drifted.json', purpose: 'shared', content: '{"version":1}', selected: true },
+        { path: 'shared/matching.json', purpose: 'shared', content: '{"version":2}', selected: true },
       ],
       changes: [
         {
           path: 'backend/routes.py',
           mode: 'patch',
           reason: 'routes',
-          old_snippet: 'old',
-          new_content: 'new',
+          old_snippet: 'old-routes',
+          new_content: 'new-routes',
           selected: true,
           replace_all_matches: false,
         },
@@ -53,8 +54,8 @@ function createComparisonArtifacts() {
           path: 'backend/settings.py',
           mode: 'patch',
           reason: 'settings',
-          old_snippet: 'old',
-          new_content: 'new',
+          old_snippet: 'old-settings',
+          new_content: 'new-settings',
           selected: true,
           replace_all_matches: false,
         },
@@ -63,25 +64,34 @@ function createComparisonArtifacts() {
           mode: 'rewrite',
           reason: 'dashboard',
           old_snippet: null,
-          new_content: 'new',
+          new_content: 'preview-dashboard',
           selected: true,
           replace_all_matches: false,
         },
         {
-          path: 'shared/theme.ts',
+          path: 'frontend/trade.tsx',
           mode: 'rewrite',
-          reason: 'theme',
+          reason: 'trade',
           old_snippet: null,
-          new_content: 'new',
+          new_content: 'preview-trade',
           selected: true,
           replace_all_matches: false,
         },
         {
-          path: 'shared/worker.ts',
+          path: 'shared/drifted.ts',
           mode: 'rewrite',
-          reason: 'worker',
+          reason: 'drifted',
           old_snippet: null,
-          new_content: 'new',
+          new_content: 'preview-drifted',
+          selected: true,
+          replace_all_matches: false,
+        },
+        {
+          path: 'shared/matching.ts',
+          mode: 'rewrite',
+          reason: 'matching',
+          old_snippet: null,
+          new_content: 'shared-stable',
           selected: true,
           replace_all_matches: false,
         },
@@ -91,19 +101,20 @@ function createComparisonArtifacts() {
 
   const currentArtifact = createArtifact({
     files: [
-      { path: 'current/alpha.py', purpose: 'alpha', content: '', selected: true },
-      { path: 'current/beta.py', purpose: 'beta', content: '', selected: true },
-      { path: 'current/gamma.py', purpose: 'gamma', content: '', selected: true },
-      { path: 'current/zeta.py', purpose: 'zeta', content: '', selected: true },
-      { path: 'shared/config.json', purpose: 'shared', content: '', selected: true },
+      { path: 'current/alpha.py', purpose: 'alpha', content: 'current-alpha', selected: true },
+      { path: 'current/beta.py', purpose: 'beta', content: 'current-beta', selected: true },
+      { path: 'current/gamma.py', purpose: 'gamma', content: 'current-gamma', selected: true },
+      { path: 'current/zeta.py', purpose: 'zeta', content: 'current-zeta', selected: true },
+      { path: 'shared/drifted.json', purpose: 'shared', content: '{"version":9}', selected: true },
+      { path: 'shared/matching.json', purpose: 'shared', content: '{"version":2}', selected: true },
     ],
     changes: [
       {
         path: 'current/change-alpha.ts',
         mode: 'patch',
         reason: 'alpha',
-        old_snippet: 'old',
-        new_content: 'new',
+        old_snippet: 'old-alpha',
+        new_content: 'new-alpha',
         selected: true,
         replace_all_matches: false,
       },
@@ -111,8 +122,8 @@ function createComparisonArtifacts() {
         path: 'current/change-beta.ts',
         mode: 'patch',
         reason: 'beta',
-        old_snippet: 'old',
-        new_content: 'new',
+        old_snippet: 'old-beta',
+        new_content: 'new-beta',
         selected: true,
         replace_all_matches: false,
       },
@@ -121,7 +132,7 @@ function createComparisonArtifacts() {
         mode: 'rewrite',
         reason: 'gamma',
         old_snippet: null,
-        new_content: 'new',
+        new_content: 'current-gamma',
         selected: true,
         replace_all_matches: false,
       },
@@ -130,16 +141,25 @@ function createComparisonArtifacts() {
         mode: 'rewrite',
         reason: 'zeta',
         old_snippet: null,
-        new_content: 'new',
+        new_content: 'current-zeta',
         selected: true,
         replace_all_matches: false,
       },
       {
-        path: 'shared/theme.ts',
+        path: 'shared/drifted.ts',
         mode: 'rewrite',
-        reason: 'theme',
+        reason: 'drifted',
         old_snippet: null,
-        new_content: 'new',
+        new_content: 'current-drifted',
+        selected: true,
+        replace_all_matches: false,
+      },
+      {
+        path: 'shared/matching.ts',
+        mode: 'rewrite',
+        reason: 'matching',
+        old_snippet: null,
+        new_content: 'shared-stable',
         selected: true,
         replace_all_matches: false,
       },
@@ -150,7 +170,7 @@ function createComparisonArtifacts() {
 }
 
 describe('GenerationHistoryEntryPreview', () => {
-  it('renders path detail lists and overflow messaging for comparison differences', () => {
+  it('renders path detail lists, overflow messaging, and content-aware summary counts', () => {
     const { entry, currentArtifact } = createComparisonArtifacts()
 
     render(<GenerationHistoryEntryPreview entry={entry} currentArtifact={currentArtifact} />)
@@ -161,8 +181,12 @@ describe('GenerationHistoryEntryPreview', () => {
 
     expect(scope.getByText(/files only in this generation: 4/i)).toBeInTheDocument()
     expect(scope.getByText(/files only in current: 4/i)).toBeInTheDocument()
+    expect(scope.getByText(/matching files: 1/i)).toBeInTheDocument()
+    expect(scope.getByText(/drifted files: 1/i)).toBeInTheDocument()
     expect(scope.getByText(/changes only in this generation: 4/i)).toBeInTheDocument()
     expect(scope.getByText(/changes only in current: 4/i)).toBeInTheDocument()
+    expect(scope.getByText(/matching changes: 1/i)).toBeInTheDocument()
+    expect(scope.getByText(/drifted changes: 1/i)).toBeInTheDocument()
 
     expect(scope.getByText(/backend\/api.py/i)).toBeInTheDocument()
     expect(scope.getByText(/backend\/main.py/i)).toBeInTheDocument()
@@ -182,32 +206,44 @@ describe('GenerationHistoryEntryPreview', () => {
     expect(scope.getByText(/current\/change-gamma.ts/i)).toBeInTheDocument()
   })
 
-  it('reveals shared file and change details on demand', async () => {
+  it('reveals matching and drifted file and change details on demand', async () => {
     const user = userEvent.setup()
     const { entry, currentArtifact } = createComparisonArtifacts()
 
     render(<GenerationHistoryEntryPreview entry={entry} currentArtifact={currentArtifact} />)
 
-    expect(screen.getByRole('button', { name: /show shared files/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /show shared changes/i })).toBeInTheDocument()
-    expect(screen.queryByText(/^shared files$/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/^shared changes$/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /show matching files/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /show drifted files/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /show matching changes/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /show drifted changes/i })).toBeInTheDocument()
+    expect(screen.queryByText(/^matching files$/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^drifted files$/i)).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /show shared files/i }))
-    expect(screen.getByRole('button', { name: /hide shared files/i })).toBeInTheDocument()
-    expect(screen.getByText(/^shared files$/i)).toBeInTheDocument()
-    expect(screen.getByText(/shared\/config.json/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /show matching files/i }))
+    expect(screen.getByRole('button', { name: /hide matching files/i })).toBeInTheDocument()
+    expect(screen.getByText(/^matching files$/i)).toBeInTheDocument()
+    expect(screen.getByText(/shared\/matching.json/i)).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /show shared changes/i }))
-    expect(screen.getByRole('button', { name: /hide shared changes/i })).toBeInTheDocument()
-    expect(screen.getByText(/^shared changes$/i)).toBeInTheDocument()
-    expect(screen.getByText(/shared\/theme.ts/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /show drifted files/i }))
+    expect(screen.getByRole('button', { name: /hide drifted files/i })).toBeInTheDocument()
+    expect(screen.getByText(/^drifted files$/i)).toBeInTheDocument()
+    expect(screen.getByText(/shared\/drifted.json/i)).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /hide shared files/i }))
-    expect(screen.queryByText(/^shared files$/i)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /show matching changes/i }))
+    expect(screen.getByRole('button', { name: /hide matching changes/i })).toBeInTheDocument()
+    expect(screen.getByText(/^matching changes$/i)).toBeInTheDocument()
+    expect(screen.getByText(/shared\/matching.ts/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /show drifted changes/i }))
+    expect(screen.getByRole('button', { name: /hide drifted changes/i })).toBeInTheDocument()
+    expect(screen.getByText(/^drifted changes$/i)).toBeInTheDocument()
+    expect(screen.getByText(/shared\/drifted.ts/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /hide matching files/i }))
+    expect(screen.queryByText(/^matching files$/i)).not.toBeInTheDocument()
   })
 
-  it('does not show shared detail toggles when there are no shared paths', () => {
+  it('does not show matching or drifted detail toggles when there are no shared paths', () => {
     const entry = createEntry({
       artifact: createArtifact({
         files: [{ path: 'backend/api.py', purpose: 'api', content: '', selected: true }],
@@ -242,8 +278,10 @@ describe('GenerationHistoryEntryPreview', () => {
 
     render(<GenerationHistoryEntryPreview entry={entry} currentArtifact={currentArtifact} />)
 
-    expect(screen.queryByRole('button', { name: /show shared files/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /show shared changes/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /show matching files/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /show drifted files/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /show matching changes/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /show drifted changes/i })).not.toBeInTheDocument()
   })
 
   it('copies the full path list for a comparison category, including hidden overflow items', async () => {
@@ -344,22 +382,15 @@ describe('GenerationHistoryEntryPreview', () => {
     expect(scope.getByText(/^\+1 more$/i)).toBeInTheDocument()
   })
 
-  it('does not show expand controls for sections without overflow', () => {
-    const entry = createEntry({
-      artifact: createArtifact({
-        files: [
-          { path: 'backend/api.py', purpose: 'api', content: '', selected: true },
-          { path: 'shared/config.json', purpose: 'shared', content: '', selected: true },
-        ],
-      }),
-    })
-    const currentArtifact = createArtifact({
-      files: [{ path: 'shared/config.json', purpose: 'shared', content: '', selected: true }],
-    })
+  it('does not show expand controls for sections without overflow', async () => {
+    const user = userEvent.setup()
+    const { entry, currentArtifact } = createComparisonArtifacts()
 
     render(<GenerationHistoryEntryPreview entry={entry} currentArtifact={currentArtifact} />)
 
-    const section = screen.getByText(/^files only in this generation$/i).closest('div.generation-history-preview-block')
+    await user.click(screen.getByRole('button', { name: /show matching files/i }))
+
+    const section = screen.getByText(/^matching files$/i).closest('div.generation-history-preview-block')
     expect(section).not.toBeNull()
     expect(within(section as HTMLElement).queryByRole('button', { name: /show all/i })).not.toBeInTheDocument()
   })
