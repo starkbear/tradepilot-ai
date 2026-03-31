@@ -169,6 +169,73 @@ function createComparisonArtifacts() {
   return { entry, currentArtifact }
 }
 
+function createAdditiveOnlyArtifacts() {
+  const entry = createEntry({
+    artifact: createArtifact({
+      files: [
+        { path: 'shared/matching.json', purpose: 'shared', content: '{"version":2}', selected: true },
+        { path: 'preview-only/new-dashboard.tsx', purpose: 'dashboard', content: 'new-dashboard', selected: true },
+      ],
+      changes: [
+        {
+          path: 'shared/matching.ts',
+          mode: 'rewrite',
+          reason: 'matching',
+          old_snippet: null,
+          new_content: 'shared-stable',
+          selected: true,
+          replace_all_matches: false,
+        },
+        {
+          path: 'preview-only/new-routes.ts',
+          mode: 'patch',
+          reason: 'new-routes',
+          old_snippet: 'before',
+          new_content: 'after',
+          selected: true,
+          replace_all_matches: false,
+        },
+      ],
+    }),
+  })
+
+  const currentArtifact = createArtifact({
+    files: [{ path: 'shared/matching.json', purpose: 'shared', content: '{"version":2}', selected: true }],
+    changes: [
+      {
+        path: 'shared/matching.ts',
+        mode: 'rewrite',
+        reason: 'matching',
+        old_snippet: null,
+        new_content: 'shared-stable',
+        selected: true,
+        replace_all_matches: false,
+      },
+    ],
+  })
+
+  return { entry, currentArtifact }
+}
+
+function createMatchingArtifacts() {
+  const artifact = createArtifact({
+    files: [{ path: 'shared/matching.json', purpose: 'shared', content: '{"version":2}', selected: true }],
+    changes: [
+      {
+        path: 'shared/matching.ts',
+        mode: 'rewrite',
+        reason: 'matching',
+        old_snippet: null,
+        new_content: 'shared-stable',
+        selected: true,
+        replace_all_matches: false,
+      },
+    ],
+  })
+
+  return { entry: createEntry({ artifact }), currentArtifact: artifact }
+}
+
 describe('GenerationHistoryEntryPreview', () => {
   it('renders path detail lists, overflow messaging, and content-aware summary counts', () => {
     const { entry, currentArtifact } = createComparisonArtifacts()
@@ -204,6 +271,36 @@ describe('GenerationHistoryEntryPreview', () => {
     expect(scope.getByText(/current\/change-alpha.ts/i)).toBeInTheDocument()
     expect(scope.getByText(/current\/change-beta.ts/i)).toBeInTheDocument()
     expect(scope.getByText(/current\/change-gamma.ts/i)).toBeInTheDocument()
+  })
+
+  it('suggests reviewing before restoring when any drifted paths exist', () => {
+    const { entry, currentArtifact } = createComparisonArtifacts()
+
+    render(<GenerationHistoryEntryPreview entry={entry} currentArtifact={currentArtifact} />)
+
+    expect(screen.getByText(/^suggested next step$/i)).toBeInTheDocument()
+    expect(screen.getByText(/^review before restoring$/i)).toBeInTheDocument()
+    expect(screen.getByText(/drifted paths differ from the current generation/i)).toBeInTheDocument()
+  })
+
+  it('suggests restoring when the preview only adds new matching work', () => {
+    const { entry, currentArtifact } = createAdditiveOnlyArtifacts()
+
+    render(<GenerationHistoryEntryPreview entry={entry} currentArtifact={currentArtifact} />)
+
+    expect(screen.getByText(/^suggested next step$/i)).toBeInTheDocument()
+    expect(screen.getByText(/^restore when ready$/i)).toBeInTheDocument()
+    expect(screen.getByText(/adds new files or changes without shared drift/i)).toBeInTheDocument()
+  })
+
+  it('suggests staying with current when the compared artifacts already match', () => {
+    const { entry, currentArtifact } = createMatchingArtifacts()
+
+    render(<GenerationHistoryEntryPreview entry={entry} currentArtifact={currentArtifact} />)
+
+    expect(screen.getByText(/^suggested next step$/i)).toBeInTheDocument()
+    expect(screen.getByText(/^stay with current$/i)).toBeInTheDocument()
+    expect(screen.getByText(/already matches the current generation/i)).toBeInTheDocument()
   })
 
   it('reveals matching and drifted file and change details on demand', async () => {
@@ -405,6 +502,7 @@ describe('GenerationHistoryEntryPreview', () => {
 
     expect(screen.getByText(/this is the active generation/i)).toBeInTheDocument()
     expect(screen.queryByText(/compared to current/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^suggested next step$/i)).not.toBeInTheDocument()
   })
 
   it('hides the comparison block when there is no current artifact', () => {
@@ -413,5 +511,6 @@ describe('GenerationHistoryEntryPreview', () => {
     render(<GenerationHistoryEntryPreview entry={entry} currentArtifact={null} />)
 
     expect(screen.queryByText(/compared to current/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^suggested next step$/i)).not.toBeInTheDocument()
   })
 })

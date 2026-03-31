@@ -33,6 +33,11 @@ type ComparisonDetailList = {
   paths: string[]
 }
 
+type RecoveryGuidance = {
+  title: string
+  body: string
+}
+
 type CopyState = {
   key: string
   status: 'success' | 'error'
@@ -166,6 +171,31 @@ function buildSharedDetails(summary: ComparisonSummary): ComparisonDetailList[] 
   ].filter((detail) => detail.paths.length > 0)
 }
 
+function buildRecoveryGuidance(summary: ComparisonSummary): RecoveryGuidance {
+  const driftedCount = summary.driftedFiles + summary.driftedChanges
+  const previewOnlyCount = summary.onlyInPreviewFiles + summary.onlyInPreviewChanges
+  const currentOnlyCount = summary.onlyInCurrentFiles + summary.onlyInCurrentChanges
+
+  if (driftedCount > 0 || currentOnlyCount > 0) {
+    return {
+      title: 'Review before restoring',
+      body: 'Some drifted paths differ from the current generation, so review the preview before restoring it.',
+    }
+  }
+
+  if (previewOnlyCount > 0) {
+    return {
+      title: 'Restore when ready',
+      body: 'This preview adds new files or changes without shared drift, so it is ready when you want to continue from it.',
+    }
+  }
+
+  return {
+    title: 'Stay with current',
+    body: 'This history entry already matches the current generation, so there is nothing new to restore right now.',
+  }
+}
+
 function getVisiblePaths(paths: string[], isExpanded: boolean, query: string) {
   if (!isExpanded) {
     return {
@@ -218,6 +248,7 @@ export function GenerationHistoryEntryPreview({
   const nextStepCount = entry.artifact.next_steps.length
   const applySummary = entry.apply_summary
   const comparisonSummary = !isActive && currentArtifact ? buildComparisonSummary(entry.artifact, currentArtifact) : null
+  const recoveryGuidance = comparisonSummary ? buildRecoveryGuidance(comparisonSummary) : null
   const comparisonDetails = comparisonSummary ? buildComparisonDetails(comparisonSummary) : []
   const sharedDetails = comparisonSummary ? buildSharedDetails(comparisonSummary) : []
   const visibleSharedDetails = sharedDetails.filter((detail) => visibleSharedDetailKeys.includes(detail.key))
@@ -301,6 +332,13 @@ export function GenerationHistoryEntryPreview({
             <li>{`Matching Changes: ${comparisonSummary.matchingChanges}`}</li>
             <li>{`Drifted Changes: ${comparisonSummary.driftedChanges}`}</li>
           </ul>
+          {recoveryGuidance ? (
+            <div className="generation-history-preview-block">
+              <p className="generation-history-preview-label">Suggested Next Step</p>
+              <p className="generation-history-preview-summary">{recoveryGuidance.title}</p>
+              <p className="generation-history-preview-note">{recoveryGuidance.body}</p>
+            </div>
+          ) : null}
           {sharedDetails.length > 0 ? (
             <div className="generation-history-actions">
               {sharedDetails.map((detail) => {
