@@ -350,6 +350,71 @@ describe('App', () => {
     )
   })
 
+  it('keeps the restored generation preview expanded after a successful continue flow', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-2',
+                created_at: '2026-03-23T09:15:00Z',
+                goal: 'Restored goal',
+                summary: 'Restored scaffold ready.',
+                artifact: RESTORED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: true,
+          body: {
+            success: true,
+            message: 'generation restored',
+            data: buildSessionSnapshot({
+              display_name: 'Wei',
+              screen: 'workspace',
+              workspace_path: 'D:/Codex/Trading assistant',
+              goal: 'Restored goal',
+              artifact: RESTORED_ARTIFACT,
+              selected_file_paths: ['docs/plan.md'],
+              selected_change_paths: [],
+              selected_file_path: 'docs/plan.md',
+              selected_change_path: null,
+              apply_result: null,
+              generation_history: [
+                {
+                  id: 'gen-2',
+                  created_at: '2026-03-23T09:15:00Z',
+                  goal: 'Restored goal',
+                  summary: 'Restored scaffold ready.',
+                  artifact: RESTORED_ARTIFACT,
+                },
+              ],
+              active_generation_id: 'gen-2',
+            }),
+            errors: [],
+          },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /continue restored goal/i }))
+
+    expect(await screen.findByRole('region', { name: /preview restored goal/i })).toBeInTheDocument()
+  })
   it('keeps the current artifact visible when restoring history fails', async () => {
     const user = userEvent.setup()
     const fetchMock = vi
@@ -1285,7 +1350,9 @@ describe('App', () => {
 
     const currentButton = within(historyPanel).getByRole('button', { name: /preview second history entry/i })
     expect(currentButton).toBeInTheDocument()
-    expect(within(historyPanel).getByText(/active/i)).toBeInTheDocument()
+    const currentItem = currentButton.closest('li')
+    expect(currentItem).not.toBeNull()
+    expect(within(currentItem as HTMLElement).getByText(/^active$/i)).toBeInTheDocument()
   })
 
   it('removes a single generation history entry from the panel', async () => {
@@ -2255,8 +2322,3 @@ describe('App', () => {
     )
   })
 })
-
-
-
-
-
