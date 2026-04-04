@@ -33,6 +33,7 @@ export default function App() {
   const [activeGenerationId, setActiveGenerationId] = useState<string | null>(null)
   const [expandedGenerationId, setExpandedGenerationId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [historyActionMessage, setHistoryActionMessage] = useState<string | null>(null)
   const [artifact, setArtifact] = useState<GenerationArtifact | null>(null)
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null)
   const [selectedFilePaths, setSelectedFilePaths] = useState<string[]>([])
@@ -102,6 +103,16 @@ export default function App() {
     setApplyErrorMessage(null)
     resetPreviewState()
   }
+
+  function findGenerationEntry(generationId: string) {
+    return generationHistory.find((entry) => entry.id === generationId) ?? null
+  }
+
+  function entryNeedsAttention(entry: GenerationHistoryEntry) {
+    const applySummary = entry.apply_summary
+    return Boolean(applySummary && (applySummary.issue_count > 0 || applySummary.error_count > 0))
+  }
+
 
   useEffect(() => {
     let isCancelled = false
@@ -200,6 +211,7 @@ export default function App() {
     try {
       const snapshot = await clearSession()
       applyRestoredSession(snapshot)
+      setHistoryActionMessage(null)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Clearing session failed')
     } finally {
@@ -208,17 +220,38 @@ export default function App() {
   }
 
   function handleToggleGenerationPreview(generationId: string) {
-    setExpandedGenerationId((current) => (current === generationId ? null : generationId))
+    const entry = findGenerationEntry(generationId)
+
+    setExpandedGenerationId((current) => {
+      const isClosing = current === generationId
+
+      if (entry) {
+        if (isClosing) {
+          setHistoryActionMessage(`Preview hidden for "${entry.goal}".`)
+        } else if (entryNeedsAttention(entry)) {
+          setHistoryActionMessage(`Reviewing "${entry.goal}".`)
+        } else {
+          setHistoryActionMessage(`Preview opened for "${entry.goal}".`)
+        }
+      }
+
+      return isClosing ? null : generationId
+    })
   }
 
   async function handleRestoreGeneration(generationId: string) {
     setIsRestoringGeneration(true)
     setErrorMessage(null)
+    const entry = findGenerationEntry(generationId)
 
     try {
       const snapshot = await restoreGeneration(generationId)
       applyRestoredSession(snapshot)
+      if (entry) {
+        setHistoryActionMessage(`Continued from "${entry.goal}".`)
+      }
     } catch (error) {
+      setHistoryActionMessage(null)
       setErrorMessage(error instanceof Error ? error.message : 'Restoring generation failed')
     } finally {
       setIsRestoringGeneration(false)
@@ -228,11 +261,16 @@ export default function App() {
   async function handleDeleteGeneration(generationId: string) {
     setIsManagingGenerationHistory(true)
     setErrorMessage(null)
+    const entry = findGenerationEntry(generationId)
 
     try {
       const snapshot = await deleteGeneration(generationId)
       applyRestoredSession(snapshot)
+      if (entry) {
+        setHistoryActionMessage(`Removed "${entry.goal}" from history.`)
+      }
     } catch (error) {
+      setHistoryActionMessage(null)
       setErrorMessage(error instanceof Error ? error.message : 'Deleting generation failed')
     } finally {
       setIsManagingGenerationHistory(false)
@@ -246,12 +284,15 @@ export default function App() {
     try {
       const snapshot = await clearGenerationHistory()
       applyRestoredSession(snapshot)
+      setHistoryActionMessage('Generation history cleared.')
     } catch (error) {
+      setHistoryActionMessage(null)
       setErrorMessage(error instanceof Error ? error.message : 'Clearing generation history failed')
     } finally {
       setIsManagingGenerationHistory(false)
     }
   }
+
 
   function handleToggleFile(path: string) {
     setSelectedFilePaths((current) =>
@@ -324,6 +365,7 @@ export default function App() {
             expandedGenerationId={expandedGenerationId}
             currentArtifact={artifact}
             errorMessage={errorMessage}
+            historyActionMessage={historyActionMessage}
             isGenerating={isGenerating}
             isClearingSession={isClearingSession}
             isRestoringGeneration={isRestoringGeneration}
