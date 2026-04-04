@@ -36,6 +36,7 @@ type ComparisonDetailList = {
 type RecoveryGuidance = {
   title: string
   body: string
+  recommendedActionLabel: string
 }
 
 type CopyState = {
@@ -180,6 +181,7 @@ function buildRecoveryGuidance(summary: ComparisonSummary): RecoveryGuidance {
     return {
       title: 'Review before restoring',
       body: 'Some drifted paths differ from the current generation, so review the preview before restoring it.',
+      recommendedActionLabel: 'Review',
     }
   }
 
@@ -187,12 +189,14 @@ function buildRecoveryGuidance(summary: ComparisonSummary): RecoveryGuidance {
     return {
       title: 'Restore when ready',
       body: 'This preview adds new files or changes without shared drift, so it is ready when you want to continue from it.',
+      recommendedActionLabel: 'Continue',
     }
   }
 
   return {
     title: 'Stay with current',
     body: 'This history entry already matches the current generation, so there is nothing new to restore right now.',
+    recommendedActionLabel: 'Continue',
   }
 }
 
@@ -337,6 +341,8 @@ export function GenerationHistoryEntryPreview({
               <p className="generation-history-preview-label">Suggested Next Step</p>
               <p className="generation-history-preview-summary">{recoveryGuidance.title}</p>
               <p className="generation-history-preview-note">{recoveryGuidance.body}</p>
+              <p className="generation-history-preview-label">Recommended Action</p>
+              <p className="generation-history-preview-note">{recoveryGuidance.recommendedActionLabel}</p>
             </div>
           ) : null}
           {sharedDetails.length > 0 ? (
@@ -444,3 +450,6 @@ export function GenerationHistoryEntryPreview({
     </section>
   )
 }
+
+
+

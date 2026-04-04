@@ -281,6 +281,8 @@ describe('GenerationHistoryEntryPreview', () => {
     expect(screen.getByText(/^suggested next step$/i)).toBeInTheDocument()
     expect(screen.getByText(/^review before restoring$/i)).toBeInTheDocument()
     expect(screen.getByText(/drifted paths differ from the current generation/i)).toBeInTheDocument()
+    expect(screen.getByText(/^recommended action$/i)).toBeInTheDocument()
+    expect(screen.getByText(/^review$/i)).toBeInTheDocument()
   })
 
   it('suggests restoring when the preview only adds new matching work', () => {
@@ -291,6 +293,8 @@ describe('GenerationHistoryEntryPreview', () => {
     expect(screen.getByText(/^suggested next step$/i)).toBeInTheDocument()
     expect(screen.getByText(/^restore when ready$/i)).toBeInTheDocument()
     expect(screen.getByText(/adds new files or changes without shared drift/i)).toBeInTheDocument()
+    expect(screen.getByText(/^recommended action$/i)).toBeInTheDocument()
+    expect(screen.getByText(/^continue$/i)).toBeInTheDocument()
   })
 
   it('suggests staying with current when the compared artifacts already match', () => {
@@ -301,6 +305,8 @@ describe('GenerationHistoryEntryPreview', () => {
     expect(screen.getByText(/^suggested next step$/i)).toBeInTheDocument()
     expect(screen.getByText(/^stay with current$/i)).toBeInTheDocument()
     expect(screen.getByText(/already matches the current generation/i)).toBeInTheDocument()
+    expect(screen.getByText(/^recommended action$/i)).toBeInTheDocument()
+    expect(screen.getByText(/^continue$/i)).toBeInTheDocument()
   })
 
   it('reveals matching and drifted file and change details on demand', async () => {
@@ -503,6 +509,7 @@ describe('GenerationHistoryEntryPreview', () => {
     expect(screen.getByText(/this is the active generation/i)).toBeInTheDocument()
     expect(screen.queryByText(/compared to current/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/^suggested next step$/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^recommended action$/i)).not.toBeInTheDocument()
   })
 
   it('hides the comparison block when there is no current artifact', () => {
@@ -512,5 +519,8 @@ describe('GenerationHistoryEntryPreview', () => {
 
     expect(screen.queryByText(/compared to current/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/^suggested next step$/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^recommended action$/i)).not.toBeInTheDocument()
   })
 })
+
+
