@@ -91,6 +91,16 @@ button:disabled {
   font-weight: 600;
 }
 
+.history-action-message {
+  margin: 0 0 0.9rem;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid rgba(30, 93, 79, 0.2);
+  border-radius: 0.9rem;
+  background: rgba(30, 93, 79, 0.08);
+  color: #1e5d4f;
+  font-weight: 600;
+}
+
 .workspace-shortcuts {
   display: grid;
   gap: 0.7rem;

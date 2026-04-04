@@ -1353,9 +1353,9 @@ describe('App', () => {
     await user.click(within(historyPanel).getByRole('button', { name: /remove first history entry/i }))
 
     await waitFor(() => {
-      expect(screen.queryByText(/first history entry/i)).not.toBeInTheDocument()
+      expect(within(screen.getByRole('region', { name: /recent generations/i })).queryByText(/first history entry/i)).not.toBeInTheDocument()
     })
-    expect(screen.getByText(/second history entry/i)).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: /recent generations/i })).getByText(/second history entry/i)).toBeInTheDocument()
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       '/api/session/generations/gen-1',
@@ -1489,9 +1489,9 @@ describe('App', () => {
     await user.click(within(historyPanel).getByRole('button', { name: /remove first history entry/i }))
 
     await waitFor(() => {
-      expect(screen.queryByText(/first history entry/i)).not.toBeInTheDocument()
+      expect(within(screen.getByRole('region', { name: /recent generations/i })).queryByText(/first history entry/i)).not.toBeInTheDocument()
     })
-    expect(screen.getByRole('button', { name: /preview second history entry/i })).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: /recent generations/i })).getByRole('button', { name: /preview second history entry/i })).toBeInTheDocument()
   })
 
   it('clears generation history and hides the history panel', async () => {
@@ -1603,6 +1603,253 @@ describe('App', () => {
     expect(screen.getByText(/failing history entry/i)).toBeInTheDocument()
   })
 
+
+  it('shows history action feedback when preview is opened and hidden', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-preview',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'Previewable history entry',
+                summary: 'Preview summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /preview previewable history entry/i }))
+    expect(screen.getByText(/preview opened for "previewable history entry"\./i)).toBeInTheDocument()
+
+    await user.click(within(historyPanel).getByRole('button', { name: /hide preview previewable history entry/i }))
+    expect(screen.getByText(/preview hidden for "previewable history entry"\./i)).toBeInTheDocument()
+  })
+
+  it('shows restore feedback after a successful restore flow', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-restore',
+                created_at: '2026-03-23T09:15:00Z',
+                goal: 'Restorable entry',
+                summary: 'Restored scaffold ready.',
+                artifact: RESTORED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: true,
+          body: {
+            success: true,
+            message: 'generation restored',
+            data: buildSessionSnapshot({
+              display_name: 'Wei',
+              screen: 'workspace',
+              workspace_path: 'D:/Codex/Trading assistant',
+              goal: 'Restorable entry',
+              artifact: RESTORED_ARTIFACT,
+              selected_file_paths: ['docs/plan.md'],
+              selected_change_paths: [],
+              selected_file_path: 'docs/plan.md',
+              selected_change_path: null,
+              apply_result: null,
+              generation_history: [
+                {
+                  id: 'gen-restore',
+                  created_at: '2026-03-23T09:15:00Z',
+                  goal: 'Restorable entry',
+                  summary: 'Restored scaffold ready.',
+                  artifact: RESTORED_ARTIFACT,
+                },
+              ],
+            }),
+            errors: [],
+          },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /continue restorable entry/i }))
+
+    expect(screen.getByText(/continued from "restorable entry"\./i)).toBeInTheDocument()
+  })
+
+  it('shows remove and clear-history feedback after successful history management actions', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-remove',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'Removable entry',
+                summary: 'Remove me',
+                artifact: GENERATED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: true,
+          body: {
+            success: true,
+            message: 'generation deleted',
+            data: buildSessionSnapshot({
+              display_name: 'Wei',
+              screen: 'workspace',
+              workspace_path: 'D:/Codex/Trading assistant',
+              goal: 'Current goal',
+              artifact: GENERATED_ARTIFACT,
+              generation_history: [],
+            }),
+            errors: [],
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-clear',
+                created_at: '2026-03-23T09:10:00Z',
+                goal: 'Clearable entry',
+                summary: 'Clear me',
+                artifact: GENERATED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: true,
+          body: {
+            success: true,
+            message: 'generation history cleared',
+            data: buildSessionSnapshot({
+              display_name: 'Wei',
+              screen: 'workspace',
+              workspace_path: 'D:/Codex/Trading assistant',
+              goal: 'Current goal',
+              artifact: GENERATED_ARTIFACT,
+              generation_history: [],
+            }),
+            errors: [],
+          },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { unmount } = render(<App />)
+
+    let historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /remove removable entry/i }))
+    expect(screen.getByText(/removed "removable entry" from history\./i)).toBeInTheDocument()
+
+    unmount()
+
+    render(<App />)
+    historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /clear history/i }))
+    expect(screen.getByText(/generation history cleared\./i)).toBeInTheDocument()
+  })
+
+  it('clears stale history action feedback when a history action fails', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: GENERATED_ARTIFACT,
+            generation_history: [
+              {
+                id: 'gen-fail',
+                created_at: '2026-03-23T09:00:00Z',
+                goal: 'Failing history entry',
+                summary: 'Failing summary',
+                artifact: GENERATED_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        buildFetchResponse({
+          ok: false,
+          status: 404,
+          body: {
+            success: false,
+            message: 'generation history entry not found',
+            data: null,
+            errors: ['generation history entry not found'],
+          },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /preview failing history entry/i }))
+    expect(screen.getByText(/preview opened for "failing history entry"\./i)).toBeInTheDocument()
+
+    await user.click(within(historyPanel).getByRole('button', { name: /continue failing history entry/i }))
+
+    expect(await screen.findByText(/generation history entry not found/i)).toBeInTheDocument()
+    expect(screen.queryByText(/preview opened for "failing history entry"\./i)).not.toBeInTheDocument()
+  })
   it('fills the workspace path from a recent workspace shortcut', async () => {
     const user = userEvent.setup()
     vi.stubGlobal(
@@ -2008,5 +2255,8 @@ describe('App', () => {
     )
   })
 })
+
+
+
 
 

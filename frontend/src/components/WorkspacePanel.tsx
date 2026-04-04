@@ -11,6 +11,7 @@ type WorkspacePanelProps = {
   expandedGenerationId: string | null
   currentArtifact?: GenerationArtifact | null
   errorMessage: string | null
+  historyActionMessage?: string | null
   isGenerating: boolean
   isClearingSession?: boolean
   isRestoringGeneration?: boolean
@@ -35,6 +36,7 @@ export function WorkspacePanel({
   expandedGenerationId,
   currentArtifact = null,
   errorMessage,
+  historyActionMessage = null,
   isGenerating,
   isClearingSession = false,
   isRestoringGeneration = false,
@@ -79,6 +81,11 @@ export function WorkspacePanel({
             ))}
           </div>
         </section>
+      ) : null}
+      {historyActionMessage ? (
+        <p className="history-action-message" role="status">
+          {historyActionMessage}
+        </p>
       ) : null}
       <GenerationHistoryPanel
         entries={generationHistory}
