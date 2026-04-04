@@ -1,11 +1,12 @@
 import { useState } from 'react'
 
-import type { GenerationArtifact, GenerationHistoryEntry } from '../lib/types'
+import type { FileChangeDraft, FileDraft, GenerationArtifact, GenerationHistoryEntry } from '../lib/types'
 import { GenerationHistoryEntryPreview } from './GenerationHistoryEntryPreview'
 
 type GenerationHistoryPanelProps = {
   entries: GenerationHistoryEntry[]
   activeGenerationId: string | null
+  currentArtifact?: GenerationArtifact | null
   isRestoring: boolean
   isManagingHistory: boolean
   expandedGenerationId: string | null
@@ -32,12 +33,15 @@ type HistoryFilterOption = {
   label: string
 }
 
+type RecommendedActionLabel = 'Review' | 'Continue'
+
 type EntryAction = {
   key: string
   label: string
   ariaLabel: string
   onClick: () => void
   isPrimary?: boolean
+  isRecommended?: boolean
 }
 
 const FILTER_OPTIONS: HistoryFilterOption[] = [
@@ -186,6 +190,64 @@ function getEmptyStateCopy(filter: Exclude<HistoryFilter, 'all'>) {
   return 'No applied generations yet.'
 }
 
+function buildPathSignatureMap<T extends { path: string }>(items: T[], getSignature: (item: T) => string) {
+  return new Map(items.map((item) => [item.path, getSignature(item)]))
+}
+
+function buildFileSignature(file: FileDraft) {
+  return file.content
+}
+
+function buildChangeSignature(change: FileChangeDraft) {
+  return JSON.stringify({
+    mode: change.mode,
+    old_snippet: change.old_snippet ?? '',
+    new_content: change.new_content,
+    replace_all_matches: change.replace_all_matches,
+  })
+}
+
+function hasCurrentOnlyPaths(previewPaths: Set<string>, currentPaths: Set<string>) {
+  return [...currentPaths].some((path) => !previewPaths.has(path))
+}
+
+function hasDriftedSharedPaths(previewSignatures: Map<string, string>, currentSignatures: Map<string, string>) {
+  return [...previewSignatures.entries()].some(([path, signature]) => currentSignatures.has(path) && currentSignatures.get(path) !== signature)
+}
+
+function getRecommendedActionLabel(
+  entry: GenerationHistoryEntry,
+  currentArtifact: GenerationArtifact | null,
+  activeGenerationId: string | null,
+  expandedGenerationId: string | null,
+): RecommendedActionLabel | null {
+  if (!currentArtifact || entry.id === activeGenerationId || expandedGenerationId !== entry.id) {
+    return null
+  }
+
+  const previewFilePaths = new Set(entry.artifact.files.map((file) => file.path))
+  const currentFilePaths = new Set(currentArtifact.files.map((file) => file.path))
+  const previewChangePaths = new Set(entry.artifact.changes.map((change) => change.path))
+  const currentChangePaths = new Set(currentArtifact.changes.map((change) => change.path))
+
+  const hasCurrentOnlyFiles = hasCurrentOnlyPaths(previewFilePaths, currentFilePaths)
+  const hasCurrentOnlyChanges = hasCurrentOnlyPaths(previewChangePaths, currentChangePaths)
+
+  const previewFileSignatures = buildPathSignatureMap(entry.artifact.files, buildFileSignature)
+  const currentFileSignatures = buildPathSignatureMap(currentArtifact.files, buildFileSignature)
+  const previewChangeSignatures = buildPathSignatureMap(entry.artifact.changes, buildChangeSignature)
+  const currentChangeSignatures = buildPathSignatureMap(currentArtifact.changes, buildChangeSignature)
+
+  const hasDriftedFiles = hasDriftedSharedPaths(previewFileSignatures, currentFileSignatures)
+  const hasDriftedChanges = hasDriftedSharedPaths(previewChangeSignatures, currentChangeSignatures)
+
+  if (hasCurrentOnlyFiles || hasCurrentOnlyChanges || hasDriftedFiles || hasDriftedChanges) {
+    return 'Review'
+  }
+
+  return 'Continue'
+}
+
 function buildEntryActions({
   entry,
   activeGenerationId,
@@ -198,6 +260,7 @@ function buildEntryActions({
   entry: GenerationHistoryEntry
   activeGenerationId: string | null
   expandedGenerationId: string | null
+  currentArtifact?: GenerationArtifact | null
   onRestore: (generationId: string) => void
   onRemove: (generationId: string) => void
   onTogglePreview: (generationId: string) => void
@@ -205,6 +268,7 @@ function buildEntryActions({
   const lifecycleLabel = getLifecycleBadge(entry).label
   const isActive = entry.id === activeGenerationId
   const isExpanded = expandedGenerationId === entry.id
+  const recommendedActionLabel = getRecommendedActionLabel(entry, currentArtifact, activeGenerationId, expandedGenerationId)
 
   if (isActive) {
     return [
@@ -232,6 +296,7 @@ function buildEntryActions({
         ariaLabel: `Review ${entry.goal}`,
         onClick: () => onTogglePreview(entry.id),
         isPrimary: true,
+        isRecommended: recommendedActionLabel === 'Review',
       },
       {
         key: 'restore',
@@ -255,6 +320,7 @@ function buildEntryActions({
       ariaLabel: `Continue ${entry.goal}`,
       onClick: () => onRestore(entry.id),
       isPrimary: true,
+      isRecommended: recommendedActionLabel === 'Continue',
     },
     {
       key: 'preview',
@@ -274,10 +340,10 @@ function buildEntryActions({
 export function GenerationHistoryPanel({
   entries,
   activeGenerationId,
+  currentArtifact = null,
   isRestoring,
   isManagingHistory,
   expandedGenerationId,
-  currentArtifact = null,
   onRestore,
   onRemove,
   onClear,
@@ -331,6 +397,7 @@ export function GenerationHistoryPanel({
                     entry,
                     activeGenerationId,
                     expandedGenerationId,
+                    currentArtifact,
                     onRestore,
                     onRemove,
                     onTogglePreview,
@@ -373,6 +440,9 @@ export function GenerationHistoryPanel({
                             onClick={action.onClick}
                           >
                             {action.label}
+                            {action.isRecommended ? (
+                              <span className="generation-history-action-marker">Recommended</span>
+                            ) : null}
                           </button>
                         ))}
                       </div>
@@ -394,4 +464,3 @@ export function GenerationHistoryPanel({
     </section>
   )
 }
-
