@@ -82,6 +82,7 @@ describe('GenerationHistoryPanel', () => {
     expect(item).not.toBeNull()
     const reviewButton = within(item as HTMLElement).getByRole('button', { name: /review/i })
     expect(within(reviewButton).getByText(/^recommended$/i)).toBeInTheDocument()
+    expect(reviewButton.className).toMatch(/is-recommended/)
   })
 
   it('marks continue as recommended for expanded draft entries without shared drift', () => {
@@ -98,6 +99,7 @@ describe('GenerationHistoryPanel', () => {
     expect(item).not.toBeNull()
     const continueButton = within(item as HTMLElement).getByRole('button', { name: /continue/i })
     expect(within(continueButton).getByText(/^recommended$/i)).toBeInTheDocument()
+    expect(continueButton.className).toMatch(/is-recommended/)
   })
 
   it('does not show recommendation markers for collapsed entries', () => {
@@ -110,6 +112,7 @@ describe('GenerationHistoryPanel', () => {
     renderPanel({ entries: [entry], currentArtifact: createArtifact() })
 
     expect(screen.queryByText(/^recommended$/i)).not.toBeInTheDocument()
+    expect(document.querySelector('.is-recommended')).toBeNull()
   })
 
   it('does not show recommendation markers for active entries', () => {
@@ -131,5 +134,7 @@ describe('GenerationHistoryPanel', () => {
     })
 
     expect(screen.queryByText(/^recommended$/i)).not.toBeInTheDocument()
+    expect(document.querySelector('.is-recommended')).toBeNull()
   })
 })
+

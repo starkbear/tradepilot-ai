@@ -434,7 +434,7 @@ export function GenerationHistoryPanel({
                           <button
                             key={action.key}
                             type="button"
-                            className={action.isPrimary ? 'generation-history-primary-action' : 'secondary-button'}
+                            className={`${action.isPrimary ? 'generation-history-primary-action' : 'secondary-button'}${action.isRecommended ? ' is-recommended' : ''}`}
                             aria-label={action.ariaLabel}
                             disabled={isBusy}
                             onClick={action.onClick}
@@ -464,3 +464,5 @@ export function GenerationHistoryPanel({
     </section>
   )
 }
+
+
