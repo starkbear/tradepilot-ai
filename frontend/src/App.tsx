@@ -56,7 +56,7 @@ export default function App() {
     setRewritePreviewError(null)
   }
 
-  function applyRestoredSession(snapshot: PersistedSessionSnapshot) {
+  function applyRestoredSession(snapshot: PersistedSessionSnapshot, options?: { expandedGenerationId?: string | null }) {
     setDisplayName(snapshot.display_name)
     setScreen(snapshot.screen)
     setWorkspacePath(snapshot.workspace_path)
@@ -68,7 +68,10 @@ export default function App() {
     setApplyResult(snapshot.apply_result)
     setApplyErrorMessage(null)
     setErrorMessage(null)
-    setExpandedGenerationId(null)
+    const nextExpandedGenerationId = options?.expandedGenerationId
+    const shouldKeepExpandedGeneration =
+      nextExpandedGenerationId && snapshot.generation_history.some((entry) => entry.id === nextExpandedGenerationId)
+    setExpandedGenerationId(shouldKeepExpandedGeneration ? nextExpandedGenerationId : null)
     resetPreviewState()
 
     if (snapshot.artifact) {
@@ -246,7 +249,7 @@ export default function App() {
 
     try {
       const snapshot = await restoreGeneration(generationId)
-      applyRestoredSession(snapshot)
+      applyRestoredSession(snapshot, { expandedGenerationId: generationId })
       if (entry) {
         setHistoryActionMessage(`Continued from "${entry.goal}".`)
       }
