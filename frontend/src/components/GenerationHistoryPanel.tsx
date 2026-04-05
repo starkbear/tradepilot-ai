@@ -33,6 +33,9 @@ type HistoryFilterOption = {
   label: string
 }
 
+type NonAllHistoryFilter = Exclude<HistoryFilter, 'all'>
+
+
 type RecommendedActionLabel = 'Review' | 'Continue'
 
 type EntryAction = {
@@ -51,6 +54,10 @@ const FILTER_OPTIONS: HistoryFilterOption[] = [
   { value: 'draft', label: 'Draft' },
   { value: 'applied', label: 'Applied' },
 ]
+
+function getFilterLabel(filter: HistoryFilter) {
+  return FILTER_OPTIONS.find((option) => option.value === filter)?.label ?? 'History'
+}
 
 function formatSavedAt(createdAt: string) {
   return createdAt.replace('T', ' ').slice(0, 16) + ' UTC'
@@ -360,8 +367,14 @@ export function GenerationHistoryPanel({
   const [filterNotice, setFilterNotice] = useState<string | null>(null)
 
 
+  const [filterReturnTarget, setFilterReturnTarget] = useState<NonAllHistoryFilter | null>(null)
+  const [suspendedAutoFocusFilter, setSuspendedAutoFocusFilter] = useState<NonAllHistoryFilter | null>(null)
   useEffect(() => {
     if (entries.length === 0 || filter === 'all' || !expandedGenerationId) {
+      return
+    }
+
+    if (filter === suspendedAutoFocusFilter) {
       return
     }
 
@@ -374,7 +387,9 @@ export function GenerationHistoryPanel({
 
     setFilter('focus')
     setFilterNotice('Switched to Focus to keep the current preview visible.')
-  }, [entries, activeGenerationId, expandedGenerationId, filter])
+    setFilterReturnTarget(filter === 'focus' ? null : filter)
+    setSuspendedAutoFocusFilter(null)
+  }, [entries, activeGenerationId, expandedGenerationId, filter, suspendedAutoFocusFilter])
 
   if (entries.length === 0) {
     return null
@@ -405,13 +420,34 @@ export function GenerationHistoryPanel({
             onClick={() => {
               setFilter(option.value)
               setFilterNotice(null)
+              setFilterReturnTarget(null)
+              setSuspendedAutoFocusFilter(null)
             }}
           >
             {option.label}
           </button>
         ))}
       </div>
-      {filterNotice ? <p className="generation-history-note">{filterNotice}</p> : null}
+      {filterNotice ? (
+        <div className="generation-history-note-row">
+          <p className="generation-history-note">{filterNotice}</p>
+          {filterReturnTarget ? (
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={isBusy}
+              onClick={() => {
+                setFilter(filterReturnTarget)
+                setFilterNotice(null)
+                setSuspendedAutoFocusFilter(filterReturnTarget)
+                setFilterReturnTarget(null)
+              }}
+            >
+              {`Back to ${getFilterLabel(filterReturnTarget)}`}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       <div className="generation-history-groups">
         {sections.map((section) => (
           <section key={section.label} className="generation-history-group" aria-label={section.label}>

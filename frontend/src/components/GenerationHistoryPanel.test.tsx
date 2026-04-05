@@ -176,11 +176,12 @@ describe('GenerationHistoryPanel', () => {
     )
 
     expect(await screen.findByText(/switched to focus to keep the current preview visible/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^back to needs attention$/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /^focus$/i })).toBeInTheDocument()
     expect(screen.getByText(entry.goal)).toBeInTheDocument()
   })
 
-  it('clears the auto-focus helper note after a manual filter change', async () => {
+  it('returns to the previous filter from the auto-focus helper action', async () => {
     const user = userEvent.setup()
     const entry = createEntry({
       apply_summary: createApplySummary({ issue_count: 1 }),
@@ -215,10 +216,10 @@ describe('GenerationHistoryPanel', () => {
       />,
     )
 
-    expect(await screen.findByText(/switched to focus to keep the current preview visible/i)).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: /^all$/i }))
+    const backButton = await screen.findByRole('button', { name: /^back to needs attention$/i })
+    await user.click(backButton)
 
     expect(screen.queryByText(/switched to focus to keep the current preview visible/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /^needs attention$/i })).toBeInTheDocument()
   })
 })
