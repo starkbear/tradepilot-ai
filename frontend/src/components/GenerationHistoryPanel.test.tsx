@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { GenerationArtifact, GenerationApplySummary, GenerationHistoryEntry } from '../lib/types'
@@ -136,5 +137,88 @@ describe('GenerationHistoryPanel', () => {
     expect(screen.queryByText(/^recommended$/i)).not.toBeInTheDocument()
     expect(document.querySelector('.is-recommended')).toBeNull()
   })
-})
+  it('switches to focus when an expanded entry falls out of the active filter', async () => {
+    const user = userEvent.setup()
+    const entry = createEntry({
+      apply_summary: createApplySummary({ issue_count: 1 }),
+      artifact: createArtifact({
+        files: [{ path: 'shared/config.json', purpose: 'config', content: 'preview', selected: true }],
+      }),
+    })
+    const currentArtifact = createArtifact({
+      files: [{ path: 'shared/config.json', purpose: 'config', content: 'current', selected: true }],
+    })
 
+    const view = renderPanel({
+      entries: [entry],
+      currentArtifact,
+      expandedGenerationId: entry.id,
+    })
+
+    await user.click(screen.getByRole('button', { name: /^needs attention$/i }))
+
+    expect(screen.getByRole('heading', { name: /^needs attention$/i })).toBeInTheDocument()
+    expect(screen.getByText(entry.goal)).toBeInTheDocument()
+
+    view.rerender(
+      <GenerationHistoryPanel
+        entries={[createEntry({ ...entry, apply_summary: createApplySummary() })]}
+        currentArtifact={currentArtifact}
+        activeGenerationId={entry.id}
+        expandedGenerationId={entry.id}
+        isRestoring={false}
+        isManagingHistory={false}
+        onRestore={vi.fn()}
+        onRemove={vi.fn()}
+        onClear={vi.fn()}
+        onTogglePreview={vi.fn()}
+      />,
+    )
+
+    expect(await screen.findByText(/switched to focus to keep the current preview visible/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /^focus$/i })).toBeInTheDocument()
+    expect(screen.getByText(entry.goal)).toBeInTheDocument()
+  })
+
+  it('clears the auto-focus helper note after a manual filter change', async () => {
+    const user = userEvent.setup()
+    const entry = createEntry({
+      apply_summary: createApplySummary({ issue_count: 1 }),
+      artifact: createArtifact({
+        files: [{ path: 'shared/config.json', purpose: 'config', content: 'preview', selected: true }],
+      }),
+    })
+    const currentArtifact = createArtifact({
+      files: [{ path: 'shared/config.json', purpose: 'config', content: 'current', selected: true }],
+    })
+
+    const view = renderPanel({
+      entries: [entry],
+      currentArtifact,
+      expandedGenerationId: entry.id,
+    })
+
+    await user.click(screen.getByRole('button', { name: /^needs attention$/i }))
+
+    view.rerender(
+      <GenerationHistoryPanel
+        entries={[createEntry({ ...entry, apply_summary: createApplySummary() })]}
+        currentArtifact={currentArtifact}
+        activeGenerationId={entry.id}
+        expandedGenerationId={entry.id}
+        isRestoring={false}
+        isManagingHistory={false}
+        onRestore={vi.fn()}
+        onRemove={vi.fn()}
+        onClear={vi.fn()}
+        onTogglePreview={vi.fn()}
+      />,
+    )
+
+    expect(await screen.findByText(/switched to focus to keep the current preview visible/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /^all$/i }))
+
+    expect(screen.queryByText(/switched to focus to keep the current preview visible/i)).not.toBeInTheDocument()
+  })
+})

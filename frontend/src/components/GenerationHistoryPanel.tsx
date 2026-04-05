@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import type { FileChangeDraft, FileDraft, GenerationArtifact, GenerationHistoryEntry } from '../lib/types'
 import { GenerationHistoryEntryPreview } from './GenerationHistoryEntryPreview'
@@ -146,13 +146,13 @@ function buildAllSections(entries: GenerationHistoryEntry[], activeGenerationId:
   return sections
 }
 
-function buildFilteredSection(
+function buildFilteredEntries(
   entries: GenerationHistoryEntry[],
   activeGenerationId: string | null,
   filter: Exclude<HistoryFilter, 'all'>,
-): HistorySection {
+) {
   const sortedEntries = sortEntries(entries, activeGenerationId)
-  const filteredEntries = sortedEntries.filter((entry) => {
+  return sortedEntries.filter((entry) => {
     const lifecycleLabel = getLifecycleBadge(entry).label
 
     if (filter === 'focus') {
@@ -169,7 +169,14 @@ function buildFilteredSection(
 
     return lifecycleLabel === 'Applied'
   })
+}
 
+function buildFilteredSection(
+  entries: GenerationHistoryEntry[],
+  activeGenerationId: string | null,
+  filter: Exclude<HistoryFilter, 'all'>,
+): HistorySection {
+  const filteredEntries = buildFilteredEntries(entries, activeGenerationId, filter)
   const label = FILTER_OPTIONS.find((option) => option.value === filter)?.label ?? 'Filtered History'
   return { label, entries: filteredEntries }
 }
@@ -350,6 +357,24 @@ export function GenerationHistoryPanel({
   onTogglePreview,
 }: GenerationHistoryPanelProps) {
   const [filter, setFilter] = useState<HistoryFilter>('all')
+  const [filterNotice, setFilterNotice] = useState<string | null>(null)
+
+
+  useEffect(() => {
+    if (entries.length === 0 || filter === 'all' || !expandedGenerationId) {
+      return
+    }
+
+    const visibleEntries = buildFilteredEntries(entries, activeGenerationId, filter)
+    const isExpandedEntryVisible = visibleEntries.some((entry) => entry.id === expandedGenerationId)
+
+    if (isExpandedEntryVisible) {
+      return
+    }
+
+    setFilter('focus')
+    setFilterNotice('Switched to Focus to keep the current preview visible.')
+  }, [entries, activeGenerationId, expandedGenerationId, filter])
 
   if (entries.length === 0) {
     return null
@@ -377,12 +402,16 @@ export function GenerationHistoryPanel({
             className={`generation-history-filter${filter === option.value ? ' is-selected' : ''}`}
             aria-pressed={filter === option.value}
             disabled={isBusy}
-            onClick={() => setFilter(option.value)}
+            onClick={() => {
+              setFilter(option.value)
+              setFilterNotice(null)
+            }}
           >
             {option.label}
           </button>
         ))}
       </div>
+      {filterNotice ? <p className="generation-history-note">{filterNotice}</p> : null}
       <div className="generation-history-groups">
         {sections.map((section) => (
           <section key={section.label} className="generation-history-group" aria-label={section.label}>
@@ -464,5 +493,3 @@ export function GenerationHistoryPanel({
     </section>
   )
 }
-
-
