@@ -17,6 +17,7 @@ import {
 } from './lib/api'
 import type {
   ApplyResult,
+  CurrentArtifactPathTarget,
   GenerationArtifact,
   GenerationHistoryEntry,
   PersistedSessionSnapshot,
@@ -319,6 +320,17 @@ export default function App() {
     setSelectedFilePath(null)
   }
 
+  function handleOpenCurrentArtifactPath(target: CurrentArtifactPathTarget) {
+    if (target.kind === 'file') {
+      handleSelectFile(target.path)
+      setHistoryActionMessage(`Opened current file "${target.path}".`)
+      return
+    }
+
+    handleSelectChange(target.path)
+    setHistoryActionMessage(`Opened current change "${target.path}".`)
+  }
+
   async function handleApplySelected() {
     if (!artifact) {
       return
@@ -382,6 +394,7 @@ export default function App() {
             onDeleteGeneration={handleDeleteGeneration}
             onClearGenerationHistory={handleClearGenerationHistory}
             onToggleGenerationPreview={handleToggleGenerationPreview}
+            onOpenCurrentArtifactPath={handleOpenCurrentArtifactPath}
           />
           {artifact ? (
             <ArtifactPanel

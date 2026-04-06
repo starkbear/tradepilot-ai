@@ -466,6 +466,63 @@ describe('App', () => {
     expect(screen.getByText(/mvp scaffold ready/i)).toBeInTheDocument()
   })
 
+  it('opens the matching current artifact file from a history comparison path', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        withSessionResponse(
+          buildSessionSnapshot({
+            display_name: 'Wei',
+            screen: 'workspace',
+            workspace_path: 'D:/Codex/Trading assistant',
+            goal: 'Current goal',
+            artifact: CURRENT_COMPARISON_ARTIFACT,
+            selected_file_paths: CURRENT_COMPARISON_ARTIFACT.files.map((file) => file.path),
+            selected_change_paths: CURRENT_COMPARISON_ARTIFACT.changes.map((change) => change.path),
+            selected_file_path: 'README.md',
+            selected_change_path: null,
+            generation_history: [
+              {
+                id: 'gen-compare',
+                created_at: '2026-03-23T09:15:00Z',
+                goal: 'History comparison goal',
+                summary: 'Historical comparison artifact.',
+                artifact: HISTORY_COMPARISON_ARTIFACT,
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    render(<App />)
+
+    const historyPanel = await screen.findByRole('region', { name: /recent generations/i })
+    await user.click(within(historyPanel).getByRole('button', { name: /preview history comparison goal/i }))
+    await user.click(within(historyPanel).getByRole('button', { name: /show matching files/i }))
+    const matchingFilesSection = within(historyPanel)
+      .getByText(/^matching files$/i)
+      .closest('div.generation-history-preview-block')
+    expect(matchingFilesSection).not.toBeNull()
+    await user.click(
+      within(matchingFilesSection as HTMLElement).getByRole('button', {
+        name: /open current backend\/app\/main.py/i,
+      }),
+    )
+
+    expect(screen.getByText('Opened current file "backend/app/main.py".')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', {
+        name: 'backend/app/main.py',
+        pressed: true,
+      }),
+    ).toBeInTheDocument()
+    const artifactPreview = screen.getByRole('heading', { name: /^preview$/i }).closest('article')
+    expect(artifactPreview).not.toBeNull()
+    expect(within(artifactPreview as HTMLElement).getByText('backend entry')).toBeInTheDocument()
+  })
+
   it('renders remove and clear controls for generation history entries', async () => {
     vi.stubGlobal(
       'fetch',

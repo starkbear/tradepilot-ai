@@ -1,11 +1,18 @@
 import { useState } from 'react'
 
-import type { FileChangeDraft, FileDraft, GenerationArtifact, GenerationHistoryEntry } from '../lib/types'
+import type {
+  CurrentArtifactPathTarget,
+  FileChangeDraft,
+  FileDraft,
+  GenerationArtifact,
+  GenerationHistoryEntry,
+} from '../lib/types'
 
 type GenerationHistoryEntryPreviewProps = {
   entry: GenerationHistoryEntry
   currentArtifact?: GenerationArtifact | null
   isActive?: boolean
+  onOpenCurrentArtifactPath?: (target: CurrentArtifactPathTarget) => void
 }
 
 type ComparisonSummary = {
@@ -239,10 +246,27 @@ function getSharedToggleLabel(detailKey: string, isVisible: boolean) {
   return `${action} drifted changes`
 }
 
+function getCurrentArtifactPathKind(currentArtifact: GenerationArtifact | null, path: string) {
+  if (!currentArtifact) {
+    return null
+  }
+
+  if (currentArtifact.files.some((file) => file.path === path)) {
+    return 'file'
+  }
+
+  if (currentArtifact.changes.some((change) => change.path === path)) {
+    return 'change'
+  }
+
+  return null
+}
+
 export function GenerationHistoryEntryPreview({
   entry,
   currentArtifact = null,
   isActive = false,
+  onOpenCurrentArtifactPath,
 }: GenerationHistoryEntryPreviewProps) {
   const [copyState, setCopyState] = useState<CopyState>(null)
   const [expandedDetailKeys, setExpandedDetailKeys] = useState<string[]>([])
@@ -394,9 +418,32 @@ export function GenerationHistoryEntryPreview({
                   />
                 ) : null}
                 <ul className="generation-history-preview-list">
-                  {displayPaths.map((path) => (
-                    <li key={path}>{path}</li>
-                  ))}
+                  {displayPaths.map((path) => {
+                    const currentArtifactPathKind = getCurrentArtifactPathKind(currentArtifact, path)
+
+                    return (
+                      <li key={path}>
+                        <span>{path}</span>
+                        {currentArtifactPathKind && onOpenCurrentArtifactPath ? (
+                          <>
+                            {' '}
+                            <button
+                              type="button"
+                              className="secondary-button"
+                              onClick={() =>
+                                onOpenCurrentArtifactPath({
+                                  path,
+                                  kind: currentArtifactPathKind,
+                                })
+                              }
+                            >
+                              {`Open current ${path}`}
+                            </button>
+                          </>
+                        ) : null}
+                      </li>
+                    )
+                  })}
                   {hiddenCount > 0 && !isExpanded ? <li>{`+${hiddenCount} more`}</li> : null}
                 </ul>
                 {isExpanded && hiddenCount > 0 && filteredPathCount === 0 ? (

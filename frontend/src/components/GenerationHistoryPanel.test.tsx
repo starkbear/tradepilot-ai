@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { GenerationArtifact, GenerationApplySummary, GenerationHistoryEntry } from '../lib/types'
@@ -47,6 +48,7 @@ function renderPanel(options: {
   currentArtifact?: GenerationArtifact | null
   activeGenerationId?: string | null
   expandedGenerationId?: string | null
+  onOpenCurrentArtifactPath?: (target: { path: string; kind: 'file' | 'change' }) => void
 }) {
   return render(
     <GenerationHistoryPanel
@@ -60,6 +62,7 @@ function renderPanel(options: {
       onRemove={vi.fn()}
       onClear={vi.fn()}
       onTogglePreview={vi.fn()}
+      onOpenCurrentArtifactPath={options.onOpenCurrentArtifactPath ?? vi.fn()}
     />, 
   )
 }
@@ -135,6 +138,34 @@ describe('GenerationHistoryPanel', () => {
 
     expect(screen.queryByText(/^recommended$/i)).not.toBeInTheDocument()
     expect(document.querySelector('.is-recommended')).toBeNull()
+  })
+
+  it('passes open-current actions through to expanded preview entries', async () => {
+    const user = userEvent.setup()
+    const onOpenCurrentArtifactPath = vi.fn()
+    const entry = createEntry({
+      artifact: createArtifact({
+        files: [{ path: 'shared/matching.json', purpose: 'config', content: 'preview', selected: true }],
+      }),
+    })
+    const currentArtifact = createArtifact({
+      files: [{ path: 'shared/matching.json', purpose: 'config', content: 'preview', selected: true }],
+    })
+
+    renderPanel({
+      entries: [entry],
+      currentArtifact,
+      expandedGenerationId: entry.id,
+      onOpenCurrentArtifactPath,
+    })
+
+    await user.click(screen.getByRole('button', { name: /show matching files/i }))
+    await user.click(screen.getByRole('button', { name: /open current shared\/matching\.json/i }))
+
+    expect(onOpenCurrentArtifactPath).toHaveBeenCalledWith({
+      kind: 'file',
+      path: 'shared/matching.json',
+    })
   })
 })
 

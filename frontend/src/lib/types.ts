@@ -17,6 +17,11 @@ export type FileChangeDraft = {
   replace_all_matches: boolean
 }
 
+export type CurrentArtifactPathTarget = {
+  path: string
+  kind: 'file' | 'change'
+}
+
 export type GenerationArtifact = {
   assistant_message?: string
   summary: string
