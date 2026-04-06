@@ -1,6 +1,12 @@
 import { useState } from 'react'
 
-import type { FileChangeDraft, FileDraft, GenerationArtifact, GenerationHistoryEntry } from '../lib/types'
+import type {
+  CurrentArtifactPathTarget,
+  FileChangeDraft,
+  FileDraft,
+  GenerationArtifact,
+  GenerationHistoryEntry,
+} from '../lib/types'
 import { GenerationHistoryEntryPreview } from './GenerationHistoryEntryPreview'
 
 type GenerationHistoryPanelProps = {
@@ -14,6 +20,7 @@ type GenerationHistoryPanelProps = {
   onRemove: (generationId: string) => void
   onClear: () => void
   onTogglePreview: (generationId: string) => void
+  onOpenCurrentArtifactPath: (target: CurrentArtifactPathTarget) => void
 }
 
 type HistoryBadge = {
@@ -348,6 +355,7 @@ export function GenerationHistoryPanel({
   onRemove,
   onClear,
   onTogglePreview,
+  onOpenCurrentArtifactPath,
 }: GenerationHistoryPanelProps) {
   const [filter, setFilter] = useState<HistoryFilter>('all')
 
@@ -451,6 +459,7 @@ export function GenerationHistoryPanel({
                           entry={entry}
                           currentArtifact={currentArtifact}
                           isActive={activeGenerationId === entry.id}
+                          onOpenCurrentArtifactPath={onOpenCurrentArtifactPath}
                         />
                       ) : null}
                     </li>

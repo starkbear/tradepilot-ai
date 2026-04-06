@@ -1,4 +1,4 @@
-import type { GenerationArtifact, GenerationHistoryEntry } from '../lib/types'
+import type { CurrentArtifactPathTarget, GenerationArtifact, GenerationHistoryEntry } from '../lib/types'
 import { GenerationHistoryPanel } from './GenerationHistoryPanel'
 import { ProviderSetupNotice } from './ProviderSetupNotice'
 
@@ -25,6 +25,7 @@ type WorkspacePanelProps = {
   onDeleteGeneration: (generationId: string) => void
   onClearGenerationHistory: () => void
   onToggleGenerationPreview: (generationId: string) => void
+  onOpenCurrentArtifactPath: (target: CurrentArtifactPathTarget) => void
 }
 
 export function WorkspacePanel({
@@ -50,6 +51,7 @@ export function WorkspacePanel({
   onDeleteGeneration,
   onClearGenerationHistory,
   onToggleGenerationPreview,
+  onOpenCurrentArtifactPath,
 }: WorkspacePanelProps) {
   const canGenerate = Boolean(workspacePath.trim() && goal.trim()) && !isGenerating
   const needsOpenAiSetup = errorMessage?.includes('OPENAI_API_KEY') ?? false
@@ -98,6 +100,7 @@ export function WorkspacePanel({
         onRemove={onDeleteGeneration}
         onClear={onClearGenerationHistory}
         onTogglePreview={onToggleGenerationPreview}
+        onOpenCurrentArtifactPath={onOpenCurrentArtifactPath}
       />
       <label className="field">
         <span>Project Goal</span>

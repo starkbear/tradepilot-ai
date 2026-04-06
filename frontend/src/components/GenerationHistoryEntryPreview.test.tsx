@@ -346,6 +346,66 @@ describe('GenerationHistoryEntryPreview', () => {
     expect(screen.queryByText(/^matching files$/i)).not.toBeInTheDocument()
   })
 
+  it('opens matching current files from comparison details', async () => {
+    const user = userEvent.setup()
+    const onOpenCurrentArtifactPath = vi.fn()
+    const { entry, currentArtifact } = createComparisonArtifacts()
+
+    render(
+      <GenerationHistoryEntryPreview
+        entry={entry}
+        currentArtifact={currentArtifact}
+        onOpenCurrentArtifactPath={onOpenCurrentArtifactPath}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /show matching files/i }))
+
+    const matchingFilesSection = screen.getByText(/^matching files$/i).closest('div.generation-history-preview-block')
+    expect(matchingFilesSection).not.toBeNull()
+
+    await user.click(
+      within(matchingFilesSection as HTMLElement).getByRole('button', {
+        name: /open current shared\/matching\.json/i,
+      }),
+    )
+
+    expect(onOpenCurrentArtifactPath).toHaveBeenCalledWith({
+      kind: 'file',
+      path: 'shared/matching.json',
+    })
+  })
+
+  it('opens matching current changes from comparison details', async () => {
+    const user = userEvent.setup()
+    const onOpenCurrentArtifactPath = vi.fn()
+    const { entry, currentArtifact } = createComparisonArtifacts()
+
+    render(
+      <GenerationHistoryEntryPreview
+        entry={entry}
+        currentArtifact={currentArtifact}
+        onOpenCurrentArtifactPath={onOpenCurrentArtifactPath}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /show matching changes/i }))
+
+    const matchingChangesSection = screen.getByText(/^matching changes$/i).closest('div.generation-history-preview-block')
+    expect(matchingChangesSection).not.toBeNull()
+
+    await user.click(
+      within(matchingChangesSection as HTMLElement).getByRole('button', {
+        name: /open current shared\/matching\.ts/i,
+      }),
+    )
+
+    expect(onOpenCurrentArtifactPath).toHaveBeenCalledWith({
+      kind: 'change',
+      path: 'shared/matching.ts',
+    })
+  })
+
   it('does not show matching or drifted detail toggles when there are no shared paths', () => {
     const entry = createEntry({
       artifact: createArtifact({
